@@ -1,0 +1,129 @@
+<Window x:Class="MujVideoEditor.ExportWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Exportovat" Width="560" SizeToContent="Height"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ResizeMode="NoResize" ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
+        Foreground="{StaticResource TextPrimary}" FontFamily="Segoe UI">
+    <Border Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1" CornerRadius="8">
+        <DockPanel>
+            <!-- Hlavicka (lze za ni okno pretahovat) -->
+            <Border DockPanel.Dock="Top" Height="48" Padding="18,0,6,0" Background="Transparent"
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1"
+                    MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                <DockPanel>
+                    <Button x:Name="CloseButton" DockPanel.Dock="Right" Style="{StaticResource IconButton}"
+                            Content="&#xE8BB;" FontSize="11" ToolTip="Zavřít" Click="CloseButton_Click"/>
+                    <TextBlock Text="Exportovat" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                </DockPanel>
+            </Border>
+
+            <Grid Margin="18">
+                <!-- ===== Nastaveni ===== -->
+                <StackPanel x:Name="SettingsPanel">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="Název" Style="{StaticResource SecondaryText}" VerticalAlignment="Center"/>
+                        <TextBox x:Name="NameBox" Grid.Column="1" Text="Muj_video"/>
+
+                        <TextBlock Grid.Row="1" Text="Uložit do" Style="{StaticResource SecondaryText}"
+                                   VerticalAlignment="Center" Margin="0,14,0,0"/>
+                        <DockPanel Grid.Row="1" Grid.Column="1" Margin="0,14,0,0">
+                            <Button DockPanel.Dock="Right" Style="{StaticResource ToolButton}" Content="Procházet…"
+                                    Margin="8,0,0,0" Click="Browse_Click"/>
+                            <TextBox x:Name="FolderBox" IsReadOnly="True"/>
+                        </DockPanel>
+
+                        <TextBlock Grid.Row="2" Text="Rozlišení" Style="{StaticResource SecondaryText}"
+                                   VerticalAlignment="Center" Margin="0,18,0,0"/>
+                        <StackPanel x:Name="ResolutionChoices" Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,18,0,0">
+                            <RadioButton Style="{StaticResource ChipRadio}" GroupName="Res" Content="720p" Tag="720"/>
+                            <RadioButton Style="{StaticResource ChipRadio}" GroupName="Res" Content="1080p" Tag="1080" IsChecked="True"/>
+                            <RadioButton Style="{StaticResource ChipRadio}" GroupName="Res" Content="2K" Tag="1440"/>
+                            <RadioButton Style="{StaticResource ChipRadio}" GroupName="Res" Content="4K" Tag="2160"/>
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="3" Text="Snímková frekvence" Style="{StaticResource SecondaryText}"
+                                   VerticalAlignment="Center" Margin="0,14,0,0"/>
+                        <StackPanel x:Name="FpsChoices" Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,14,0,0">
+                            <RadioButton Style="{StaticResource ChipRadio}" GroupName="Fps" Content="24 fps" Tag="24"/>
+                            <RadioButton Style="{StaticResource ChipRadio}" GroupName="Fps" Content="25 fps" Tag="25"/>
+                            <RadioButton Style="{StaticResource ChipRadio}" GroupName="Fps" Content="30 fps" Tag="30" IsChecked="True"/>
+                            <RadioButton Style="{StaticResource ChipRadio}" GroupName="Fps" Content="60 fps" Tag="60"/>
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="4" Text="Kvalita" Style="{StaticResource SecondaryText}"
+                                   VerticalAlignment="Center" Margin="0,14,0,0"/>
+                        <StackPanel x:Name="QualityChoices" Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Margin="0,14,0,0">
+                            <RadioButton Style="{StaticResource ChipRadio}" GroupName="Q" Content="Menší soubor" Tag="26"/>
+                            <RadioButton Style="{StaticResource ChipRadio}" GroupName="Q" Content="Doporučená" Tag="20" IsChecked="True"/>
+                            <RadioButton Style="{StaticResource ChipRadio}" GroupName="Q" Content="Vysoká" Tag="16"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock x:Name="SummaryText" Style="{StaticResource SecondaryText}" Margin="0,22,0,0"/>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">
+                        <Button Style="{StaticResource ToolButton}" Content="Zrušit" Margin="0,0,8,0" Click="CloseButton_Click"/>
+                        <Button Style="{StaticResource AccentButton}" Content="Exportovat" Padding="18,6" Click="Export_Click"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- ===== Prubeh ===== -->
+                <StackPanel x:Name="ProgressPanel" Visibility="Collapsed">
+                    <DockPanel>
+                        <TextBlock x:Name="PercentText" DockPanel.Dock="Right" Text="0 %" FontSize="13"/>
+                        <TextBlock Text="Exportuji video…" FontSize="13"/>
+                    </DockPanel>
+                    <ProgressBar x:Name="ExportProgress" Minimum="0" Maximum="1" Margin="0,12,0,0"/>
+                    <TextBlock Text="Může to chvíli trvat. Během exportu můžeš okno nechat otevřené."
+                               Style="{StaticResource SecondaryText}" Margin="0,12,0,0"/>
+                    <Button Style="{StaticResource ToolButton}" Content="Zrušit export" HorizontalAlignment="Right"
+                            Margin="0,20,0,0" Click="CancelExport_Click"/>
+                </StackPanel>
+
+                <!-- ===== Hotovo ===== -->
+                <StackPanel x:Name="DonePanel" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="28" Height="28" CornerRadius="14" Background="{StaticResource Accent}">
+                            <TextBlock Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="14" Foreground="White"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Video je hotové" FontSize="16" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    </StackPanel>
+                    <TextBlock x:Name="OutputPathText" Style="{StaticResource SecondaryText}" TextWrapping="Wrap" Margin="0,12,0,0"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">
+                        <Button Style="{StaticResource ToolButton}" Content="Otevřít složku" Margin="0,0,8,0" Click="OpenFolder_Click"/>
+                        <Button Style="{StaticResource ToolButton}" Content="Přehrát" Margin="0,0,8,0" Click="PlayOutput_Click"/>
+                        <Button Style="{StaticResource AccentButton}" Content="Hotovo" Padding="18,6" Click="CloseButton_Click"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- ===== Chyba ===== -->
+                <StackPanel x:Name="ErrorPanel" Visibility="Collapsed">
+                    <TextBlock Text="Export se nepovedl" FontSize="16" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="ErrorText" Style="{StaticResource SecondaryText}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                    <TextBox x:Name="ErrorLog" IsReadOnly="True" FontFamily="Consolas" FontSize="11" Height="160"
+                             TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Margin="0,12,0,0"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+                        <Button Style="{StaticResource ToolButton}" Content="Zpět k nastavení" Margin="0,0,8,0" Click="BackToSettings_Click"/>
+                        <Button Style="{StaticResource AccentButton}" Content="Zavřít" Padding="18,6" Click="CloseButton_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </DockPanel>
+    </Border>
+</Window>

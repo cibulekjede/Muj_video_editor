@@ -107,6 +107,53 @@ public partial class MainWindow : Window
         MaximizeButton.ToolTip = maximized ? "Obnovit" : "Maximalizovat";
     }
 
+    // ===== Export =====
+
+    private void Export_Click(object sender, RoutedEventArgs e)
+    {
+        var timeline = TimelineEditor.Model;
+        if (timeline.IsEmpty)
+        {
+            MessageBox.Show(this, "Časová osa je prázdná. Nejdřív na ni přidej nějaká videa, obrázky nebo hudbu.",
+                "Exportovat", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (_isPlaying)
+            TogglePlayback();
+
+        string? ffmpeg = FindOrAskForFfmpeg();
+        if (ffmpeg is null)
+            return;
+
+        new ExportWindow(timeline.Snapshot(), timeline.Duration, ffmpeg) { Owner = this }.ShowDialog();
+    }
+
+    private static string? _chosenFfmpegPath;
+
+    private string? FindOrAskForFfmpeg()
+    {
+        string? found = _chosenFfmpegPath ?? FfmpegExporter.FindFfmpeg();
+        if (found is not null)
+            return found;
+
+        var answer = MessageBox.Show(this,
+            "K exportu je potřeba program FFmpeg, ale v počítači jsem ho nenašel.\n\n" +
+            "Nainstaluješ ho příkazem v terminálu:\n    winget install Gyan.FFmpeg\n" +
+            "a pak editor spusť znovu.\n\n" +
+            "Pokud už ffmpeg.exe máš, můžeš ho teď vybrat ručně. Chceš ho vybrat?",
+            "Chybí FFmpeg", MessageBoxButton.YesNo, MessageBoxImage.Information);
+        if (answer != MessageBoxResult.Yes)
+            return null;
+
+        var dialog = new OpenFileDialog { Title = "Vyber ffmpeg.exe", Filter = "FFmpeg|ffmpeg.exe" };
+        if (dialog.ShowDialog(this) != true)
+            return null;
+
+        _chosenFfmpegPath = dialog.FileName;
+        return _chosenFfmpegPath;
+    }
+
     // ===== Klavesove zkratky =====
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)

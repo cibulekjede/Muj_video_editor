@@ -11,12 +11,13 @@ Vlastní open source video editor ve stylu CapCut, napsaný v C# (.NET 10, WPF).
 - [x] Zkracování, dělení (Ctrl+B), přesouvání a mazání klipů, Zpět/Znovu (Ctrl+Z/Ctrl+Y)
 - [ ] Text a titulky
 - [ ] Přechody a efekty
-- [ ] Export videa (pomocí FFmpeg)
+- [x] Export do MP4 (pomocí FFmpeg): 720p až 4K, 24–60 fps, volba kvality
 
 ## Požadavky
 
 - Windows 10/11
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
+- [FFmpeg](https://ffmpeg.org/) pro export videa, nejsnáz přes `winget install Gyan.FFmpeg`
 
 ## Spuštění
 
