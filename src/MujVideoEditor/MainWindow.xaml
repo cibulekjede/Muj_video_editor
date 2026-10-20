@@ -120,13 +120,27 @@
                            Foreground="{StaticResource Accent}" VerticalAlignment="Center"/>
                 <TextBlock Text="Můj video editor" FontSize="13" FontWeight="SemiBold"
                            VerticalAlignment="Center" Margin="8,0,16,0"/>
-                <Button Style="{StaticResource ToolButton}" Padding="10,4" FontSize="12"
-                        WindowChrome.IsHitTestVisibleInChrome="True">
+                <Button x:Name="MenuButton" Style="{StaticResource ToolButton}" Padding="10,4" FontSize="12"
+                        WindowChrome.IsHitTestVisibleInChrome="True" Click="MenuButton_Click">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="Nabídka"/>
                         <TextBlock Text="&#xE70D;" FontFamily="{StaticResource IconFont}" FontSize="9"
                                    VerticalAlignment="Center" Margin="6,1,0,0"/>
                     </StackPanel>
+                    <Button.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Nový projekt" InputGestureText="Ctrl+N" Click="NewProject_Click"/>
+                            <MenuItem Header="Otevřít projekt…" InputGestureText="Ctrl+O" Click="OpenProject_Click"/>
+                            <Separator/>
+                            <MenuItem Header="Uložit" InputGestureText="Ctrl+S" Click="SaveProject_Click"/>
+                            <MenuItem Header="Uložit jako…" InputGestureText="Ctrl+Shift+S" Click="SaveProjectAs_Click"/>
+                            <Separator/>
+                            <MenuItem Header="Importovat média…" InputGestureText="Ctrl+I" Click="Import_Click"/>
+                            <MenuItem Header="Exportovat video…" InputGestureText="Ctrl+E" Click="Export_Click"/>
+                            <Separator/>
+                            <MenuItem Header="Ukončit" Click="Close_Click"/>
+                        </ContextMenu>
+                    </Button.ContextMenu>
                 </Button>
             </StackPanel>
 

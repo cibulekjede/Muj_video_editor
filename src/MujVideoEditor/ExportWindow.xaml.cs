@@ -21,12 +21,13 @@ public partial class ExportWindow : Window
     private CancellationTokenSource? _cancellation;
     private string? _outputPath;
 
-    public ExportWindow(TimelineState timeline, TimeSpan duration, string ffmpegPath)
+    public ExportWindow(TimelineState timeline, TimeSpan duration, string ffmpegPath, string defaultName)
     {
         InitializeComponent();
         _timeline = timeline;
         _exporter = new FfmpegExporter(ffmpegPath);
 
+        NameBox.Text = defaultName.Replace(' ', '_');
         FolderBox.Text = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
         SummaryText.Text = $"Délka videa: {MediaItem.FormatDuration(duration)} · formát MP4 (H.264 + AAC)";
     }

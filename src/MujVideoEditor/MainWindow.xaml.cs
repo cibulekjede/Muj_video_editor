@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
@@ -72,7 +72,11 @@ public partial class MainWindow : Window
         TimelineEditor.DurationProvider = GetDurationAsync;
         TimelineEditor.Activated += (_, _) => EnterTimelineMode();
         TimelineEditor.SeekRequested += (_, time) => SeekTimeline(time);
-        TimelineEditor.Changed += (_, _) => OnTimelineChanged();
+        TimelineEditor.Changed += (_, _) =>
+        {
+            OnTimelineChanged();
+            MarkDirty();
+        };
         TimelineEditor.SelectedClipChanged += (_, clip) => OnTimelineClipSelected(clip);
 
         _playbackTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(33) };
@@ -83,8 +87,13 @@ public partial class MainWindow : Window
         StateChanged += (_, _) => UpdateMaximizeState();
 
         // Soubory predane pri spusteni (napr. pretazene na ikonu aplikace) rovnou naimportuj
+        UpdateProjectTitle();
         var startupFiles = Environment.GetCommandLineArgs().Skip(1).ToArray();
-        if (startupFiles.Length > 0)
+        var startupProject = startupFiles.FirstOrDefault(
+            f => f.EndsWith(ProjectSerializer.Extension, StringComparison.OrdinalIgnoreCase));
+        if (startupProject is not null)
+            Loaded += (_, _) => OpenProject(startupProject);
+        else if (startupFiles.Length > 0)
             Loaded += (_, _) => AddFiles(startupFiles);
     }
 
@@ -126,7 +135,7 @@ public partial class MainWindow : Window
         if (ffmpeg is null)
             return;
 
-        new ExportWindow(timeline.Snapshot(), timeline.Duration, ffmpeg) { Owner = this }.ShowDialog();
+        new ExportWindow(timeline.Snapshot(), timeline.Duration, ffmpeg, ProjectName) { Owner = this }.ShowDialog();
     }
 
     private static string? _chosenFfmpegPath;
@@ -162,8 +171,27 @@ public partial class MainWindow : Window
             return;
 
         bool ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
+        bool shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
         switch (e.Key)
         {
+            case Key.N when ctrl:
+                NewProject();
+                break;
+            case Key.O when ctrl:
+                OpenProject();
+                break;
+            case Key.S when ctrl && shift:
+                SaveProjectAs();
+                break;
+            case Key.S when ctrl:
+                SaveProject();
+                break;
+            case Key.I when ctrl:
+                ImportFromDialog();
+                break;
+            case Key.E when ctrl:
+                Export_Click(this, e);
+                break;
             case Key.Space:
                 TogglePlayback();
                 break;
@@ -249,6 +277,7 @@ public partial class MainWindow : Window
 
         if (added.Count > 0)
         {
+            MarkDirty();
             MediaList.SelectedItem = added[0];
             _ = LoadMediaInfoAsync(added);
         }
@@ -307,6 +336,7 @@ public partial class MainWindow : Window
 
         TimelineEditor.RemoveClipsOf(item);
         _mediaItems.Remove(item);
+        MarkDirty();
     }
 
     private async void AddToTimeline_Click(object sender, RoutedEventArgs e)
@@ -816,8 +846,8 @@ public partial class MainWindow : Window
     {
         var details = new Dictionary<string, string>
         {
-            ["Název:"] = "Nový projekt",
-            ["Umístění:"] = "Neuloženo",
+            ["Název:"] = ProjectName,
+            ["Umístění:"] = _projectPath is null ? "Neuloženo" : Path.GetDirectoryName(_projectPath) ?? "",
             ["Poměr stran:"] = "16:9",
             ["Rozlišení:"] = "1920 × 1080",
             ["Snímková frekvence:"] = $"{FramesPerSecond} fps"

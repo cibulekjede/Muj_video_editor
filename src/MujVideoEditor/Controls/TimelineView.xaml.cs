@@ -145,6 +145,18 @@ public partial class TimelineView : UserControl
         OnModelChanged();
     }
 
+    /// <summary>Nahradi celou casovou osu (novy nebo otevreny projekt); historie Zpet se smaze.</summary>
+    public void Load(TimelineState state)
+    {
+        Model.Restore(state);
+        _undoStack.Clear();
+        _redoStack.Clear();
+        SelectClip(null);
+        SetPlayhead(TimeSpan.Zero, followPlayback: false);
+        Scroller.ScrollToHorizontalOffset(0);
+        OnModelChanged();
+    }
+
     public void Undo() => RestoreFrom(_undoStack, _redoStack);
 
     public void Redo() => RestoreFrom(_redoStack, _undoStack);

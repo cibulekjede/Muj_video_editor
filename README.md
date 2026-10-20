@@ -9,6 +9,7 @@ Vlastní open source video editor ve stylu CapCut, napsaný v C# (.NET 10, WPF).
 - [x] Časová osa se stopou Video a Zvuk (přetažení z knihovny, dvojklik nebo tlačítko +)
 - [x] Přehrávání celého sestřihu
 - [x] Zkracování, dělení (Ctrl+B), přesouvání a mazání klipů, Zpět/Znovu (Ctrl+Z/Ctrl+Y)
+- [x] Ukládání a otevírání projektu (.mvproj), upozornění na neuložené změny
 - [ ] Text a titulky
 - [ ] Přechody a efekty
 - [x] Export do MP4 (pomocí FFmpeg): 720p až 4K, 24–60 fps, volba kvality

@@ -292,6 +292,62 @@
             <Setter Property="Height" Value="6"/>
         </Style>
 
+        <!-- Tmave nabidky (Nabidka, prave tlacitko mysi) -->
+        <Style TargetType="ContextMenu">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border Background="{StaticResource CardBackground}" BorderBrush="{StaticResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6" Padding="4" MinWidth="220">
+                            <ItemsPresenter/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="4" Padding="10,6">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter ContentSource="Header" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{TemplateBinding InputGestureText}" Margin="24,0,0,0"
+                                           Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ButtonHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="{x:Static MenuItem.SeparatorStyleKey}" TargetType="Separator">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Separator">
+                        <Rectangle Height="1" Fill="{StaticResource BorderBrush}" Margin="6,4"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style TargetType="GridSplitter">
             <Setter Property="Background" Value="Transparent"/>
         </Style>
