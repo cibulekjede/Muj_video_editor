@@ -4,6 +4,237 @@
              xmlns:local="clr-namespace:MujVideoEditor"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <!-- Barvy tmaveho motivu -->
+        <SolidColorBrush x:Key="WindowBackground" Color="#0E0E10"/>
+        <SolidColorBrush x:Key="PanelBackground" Color="#1E1E21"/>
+        <SolidColorBrush x:Key="SubPanelBackground" Color="#19191C"/>
+        <SolidColorBrush x:Key="CardBackground" Color="#2A2A2E"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#2E2E33"/>
+        <SolidColorBrush x:Key="TextPrimary" Color="#E8E8EB"/>
+        <SolidColorBrush x:Key="TextSecondary" Color="#8B8B93"/>
+        <SolidColorBrush x:Key="TextDisabled" Color="#55555C"/>
+        <SolidColorBrush x:Key="Accent" Color="#00C1CD"/>
+        <SolidColorBrush x:Key="AccentHover" Color="#1DD3DE"/>
+        <SolidColorBrush x:Key="AccentSoft" Color="#1A00C1CD"/>
+        <SolidColorBrush x:Key="ButtonBackground" Color="#2E2E33"/>
+        <SolidColorBrush x:Key="ButtonHover" Color="#3A3A40"/>
+        <SolidColorBrush x:Key="HoverBackground" Color="#2A2A2F"/>
+
+        <!-- Ikony: Segoe Fluent Icons (Windows 11), zaloha Segoe MDL2 Assets (Windows 10) -->
+        <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+
+        <!-- Obycejne tlacitko -->
+        <Style x:Key="ToolButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="Background" Value="{StaticResource ButtonBackground}"/>
+            <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ButtonHover}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Zvyraznene tlacitko (Exportovat) -->
+        <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource ToolButton}">
+            <Setter Property="Background" Value="{StaticResource Accent}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentHover}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Pruhledne tlacitko s ikonou (casova osa, prehravac) -->
+        <Style x:Key="IconButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource HoverBackground}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Tlacitka v titulkove liste (minimalizovat, maximalizovat, zavrit) -->
+        <Style x:Key="CaptionButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource HoverBackground}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="CloseCaptionButton" TargetType="Button" BasedOn="{StaticResource CaptionButton}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#C42B1C"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Zalozka s ikonou nahore v levem panelu (Media, Zvuk, Text...) -->
+        <Style x:Key="CategoryTab" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="GroupName" Value="Categories"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Width" Value="62"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="4" Padding="0,6">
+                            <StackPanel>
+                                <TextBlock Text="{TemplateBinding Tag}" FontFamily="{StaticResource IconFont}"
+                                           FontSize="18" HorizontalAlignment="Center"/>
+                                <ContentPresenter HorizontalAlignment="Center" Margin="0,4,0,0"
+                                                  TextElement.FontSize="12"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource HoverBackground}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Polozka v podnabidce vlevo (Importovat, Media...) -->
+        <Style x:Key="NavItem" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="GroupName" Value="SubNav"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="4" Padding="10,0">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource HoverBackground}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource CardBackground}"/>
+                                <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Hlavni panel se zaoblenymi rohy -->
+        <Style x:Key="Panel" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource PanelBackground}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="ClipToBounds" Value="True"/>
+        </Style>
+
+        <!-- Hlavicka panelu -->
+        <Style x:Key="PanelHeader" TargetType="Border">
+            <Setter Property="Height" Value="48"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Padding" Value="14,0"/>
+        </Style>
+
+        <Style x:Key="PanelTitle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="SecondaryText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+
+        <!-- Popisek a hodnota v panelu Podrobnosti -->
+        <Style x:Key="DetailLabel" TargetType="TextBlock" BasedOn="{StaticResource SecondaryText}">
+            <Setter Property="Margin" Value="0,0,0,22"/>
+        </Style>
+        <Style x:Key="DetailValue" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,0,0,22"/>
+        </Style>
+
+        <Style TargetType="GridSplitter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
     </Application.Resources>
 </Application>

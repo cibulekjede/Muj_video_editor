@@ -5,8 +5,288 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MujVideoEditor"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="Můj video editor" Height="900" Width="1600"
+        MinHeight="640" MinWidth="1100"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource WindowBackground}"
+        Foreground="{StaticResource TextPrimary}"
+        FontFamily="Segoe UI">
 
+    <!-- Vlastni tmava titulkova lista misto systemove -->
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="40" ResizeBorderThickness="6" GlassFrameThickness="0"
+                      CornerRadius="0" UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
+
+    <Grid x:Name="RootGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40"/>   <!-- Titulkova lista -->
+            <RowDefinition Height="*"/>    <!-- Panely -->
+        </Grid.RowDefinitions>
+
+        <!-- ===== Titulkova lista ===== -->
+        <Grid Grid.Row="0">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
+                <TextBlock Text="&#xE714;" FontFamily="{StaticResource IconFont}" FontSize="15"
+                           Foreground="{StaticResource Accent}" VerticalAlignment="Center"/>
+                <TextBlock Text="Můj video editor" FontSize="13" FontWeight="SemiBold"
+                           VerticalAlignment="Center" Margin="8,0,16,0"/>
+                <Button Style="{StaticResource ToolButton}" Padding="10,4" FontSize="12"
+                        WindowChrome.IsHitTestVisibleInChrome="True">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Nabídka"/>
+                        <TextBlock Text="&#xE70D;" FontFamily="{StaticResource IconFont}" FontSize="9"
+                                   VerticalAlignment="Center" Margin="6,1,0,0"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <TextBlock x:Name="ProjectTitle" Text="Nový projekt" FontSize="13"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Style="{StaticResource AccentButton}" Padding="12,5" Margin="0,0,12,0"
+                        VerticalAlignment="Center" WindowChrome.IsHitTestVisibleInChrome="True">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE898;" FontFamily="{StaticResource IconFont}" FontSize="13"
+                                   VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="Exportovat"/>
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource CaptionButton}" Content="&#xE921;" Click="Minimize_Click" ToolTip="Minimalizovat"/>
+                <Button x:Name="MaximizeButton" Style="{StaticResource CaptionButton}" Content="&#xE922;"
+                        Click="Maximize_Click" ToolTip="Maximalizovat"/>
+                <Button Style="{StaticResource CloseCaptionButton}" Content="&#xE8BB;" Click="Close_Click" ToolTip="Zavřít"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- ===== Panely ===== -->
+        <Grid Grid.Row="1" Margin="6,0,6,6">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" MinHeight="300"/>
+                <RowDefinition Height="6"/>
+                <RowDefinition Height="400" MinHeight="180"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="540" MinWidth="380"/>  <!-- Media -->
+                    <ColumnDefinition Width="6"/>
+                    <ColumnDefinition Width="*" MinWidth="360"/>    <!-- Prehravac -->
+                    <ColumnDefinition Width="6"/>
+                    <ColumnDefinition Width="500" MinWidth="280"/>  <!-- Podrobnosti -->
+                </Grid.ColumnDefinitions>
+
+                <!-- ===== Levy panel: media ===== -->
+                <Border Grid.Column="0" Style="{StaticResource Panel}">
+                    <DockPanel>
+                        <!-- Zalozky kategorii -->
+                        <Border DockPanel.Dock="Top" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1"
+                                Padding="6,4">
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE714;" Content="Média" IsChecked="True"/>
+                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE8D6;" Content="Zvuk"/>
+                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE8D2;" Content="Text"/>
+                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE76E;" Content="Nálepky"/>
+                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE945;" Content="Efekty"/>
+                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE8AB;" Content="Přechody"/>
+                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE7F0;" Content="Titulky"/>
+                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE71C;" Content="Filtry"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Podnabidka -->
+                            <Border Grid.Column="0" Background="{StaticResource SubPanelBackground}" Padding="8,10">
+                                <StackPanel>
+                                    <RadioButton Style="{StaticResource NavItem}" Content="Importovat" IsChecked="True"/>
+                                    <RadioButton Style="{StaticResource NavItem}" Content="Média"/>
+                                    <RadioButton Style="{StaticResource NavItem}" Content="Oblíbené"/>
+                                    <RadioButton Style="{StaticResource NavItem}" Content="Nedávné"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Plocha pro import -->
+                            <Border Grid.Column="1" Margin="14" Background="{StaticResource CardBackground}"
+                                    CornerRadius="6" Cursor="Hand" VerticalAlignment="Top" Height="250">
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <Border Width="22" Height="22" CornerRadius="11" Background="{StaticResource Accent}">
+                                            <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" FontSize="11"
+                                                       Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <TextBlock Text="Importovat" FontSize="18" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <TextBlock Text="Přetáhni sem videa, fotky a zvukové soubory." Style="{StaticResource SecondaryText}"
+                                               HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+
+                <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" ResizeBehavior="PreviousAndNext"/>
+
+                <!-- ===== Prostredni panel: prehravac ===== -->
+                <Border Grid.Column="2" Style="{StaticResource Panel}">
+                    <DockPanel>
+                        <Border DockPanel.Dock="Top" Style="{StaticResource PanelHeader}">
+                            <TextBlock Text="Přehrávač – Časová osa 01" Style="{StaticResource PanelTitle}"/>
+                        </Border>
+
+                        <!-- Ovladani prehravani -->
+                        <Grid DockPanel.Dock="Bottom" Height="48" Margin="12,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="00:00:00:00" Foreground="{StaticResource Accent}" FontFamily="Consolas" FontSize="12"/>
+                                <TextBlock Text=" / 00:00:00:00" Foreground="{StaticResource TextSecondary}" FontFamily="Consolas" FontSize="12"/>
+                            </StackPanel>
+                            <Button Style="{StaticResource IconButton}" Content="&#xE768;" ToolTip="Přehrát (mezerník)"
+                                    HorizontalAlignment="Center" FontSize="18"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button Style="{StaticResource ToolButton}" Content="Poměr" Padding="8,3" FontSize="11"
+                                        Background="Transparent" ToolTip="Poměr stran"/>
+                                <Button Style="{StaticResource IconButton}" Content="&#xE740;" ToolTip="Celá obrazovka"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Plocha nahledu 16:9 -->
+                        <Viewbox Margin="16" Stretch="Uniform">
+                            <Border Width="1600" Height="900" Background="#0A0A0B"/>
+                        </Viewbox>
+                    </DockPanel>
+                </Border>
+
+                <GridSplitter Grid.Column="3" HorizontalAlignment="Stretch" ResizeBehavior="PreviousAndNext"/>
+
+                <!-- ===== Pravy panel: podrobnosti ===== -->
+                <Border Grid.Column="4" Style="{StaticResource Panel}">
+                    <DockPanel>
+                        <Border DockPanel.Dock="Top" Style="{StaticResource PanelHeader}">
+                            <TextBlock Text="Podrobnosti" Style="{StaticResource PanelTitle}" Foreground="{StaticResource Accent}"/>
+                        </Border>
+
+                        <Border DockPanel.Dock="Bottom" Padding="14,10" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
+                            <Button Style="{StaticResource ToolButton}" Content="Upravit" HorizontalAlignment="Right" Padding="20,6"/>
+                        </Border>
+
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <Grid Margin="14,18,14,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="170"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Název:" Style="{StaticResource DetailLabel}"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="Nový projekt" Style="{StaticResource DetailValue}"/>
+
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Umístění:" Style="{StaticResource DetailLabel}"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="Neuloženo" Style="{StaticResource DetailValue}"/>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Poměr stran:" Style="{StaticResource DetailLabel}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="16:9" Style="{StaticResource DetailValue}"/>
+
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Rozlišení:" Style="{StaticResource DetailLabel}"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="1920 × 1080" Style="{StaticResource DetailValue}"/>
+
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Snímková frekvence:" Style="{StaticResource DetailLabel}"/>
+                                <TextBlock Grid.Row="4" Grid.Column="1" Text="30 fps" Style="{StaticResource DetailValue}"/>
+
+                                <TextBlock Grid.Row="5" Grid.Column="0" Text="Importovaná média:" Style="{StaticResource DetailLabel}"/>
+                                <TextBlock Grid.Row="5" Grid.Column="1" Text="Zachovat původní umístění" Style="{StaticResource DetailValue}"/>
+                            </Grid>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <GridSplitter Grid.Row="1" HorizontalAlignment="Stretch" ResizeBehavior="PreviousAndNext"/>
+
+            <!-- ===== Casova osa ===== -->
+            <Border Grid.Row="2" Style="{StaticResource Panel}">
+                <DockPanel>
+                    <!-- Nastroje -->
+                    <Border DockPanel.Dock="Top" Height="44" Padding="8,0"
+                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+                        <DockPanel VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <Button Style="{StaticResource IconButton}" Content="&#xE710;" ToolTip="Přidat stopu"/>
+                                <Button Style="{StaticResource IconButton}" Content="&#xE8B0;" ToolTip="Výběr"/>
+                                <Rectangle Width="1" Height="18" Fill="{StaticResource BorderBrush}" Margin="8,0"/>
+                                <Button Style="{StaticResource IconButton}" Content="&#xE7A7;" ToolTip="Zpět (Ctrl+Z)"/>
+                                <Button Style="{StaticResource IconButton}" Content="&#xE7A6;" ToolTip="Znovu (Ctrl+Y)" IsEnabled="False"/>
+                                <Button Style="{StaticResource IconButton}" Content="&#xE8C6;" ToolTip="Rozdělit (Ctrl+B)" IsEnabled="False"/>
+                                <Button Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Smazat (Delete)" IsEnabled="False"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Style="{StaticResource IconButton}" Content="&#xE720;" ToolTip="Nahrát hlas"/>
+                                <Rectangle Width="1" Height="18" Fill="{StaticResource BorderBrush}" Margin="8,0"/>
+                                <Button Style="{StaticResource IconButton}" Content="&#xE71F;" ToolTip="Oddálit"/>
+                                <Slider Width="140" Minimum="1" Maximum="10" Value="3" VerticalAlignment="Center" Margin="4,0"/>
+                                <Button Style="{StaticResource IconButton}" Content="&#xE8A3;" ToolTip="Přiblížit"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="26"/>  <!-- Casove pravitko -->
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Casove pravitko -->
+                        <ItemsControl x:Name="TimeRuler" Grid.Row="0" Margin="96,0,0,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Width="100" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1,0,0,0">
+                                        <TextBlock Text="{Binding}" Style="{StaticResource SecondaryText}"
+                                                   FontFamily="Consolas" FontSize="10" Margin="4,6,0,0"/>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Prazdna hlavni stopa -->
+                        <Grid Grid.Row="1" Margin="96,0,8,0" Height="86" VerticalAlignment="Center" Cursor="Hand">
+                            <Rectangle RadiusX="6" RadiusY="6" Fill="#141416"
+                                       Stroke="{StaticResource BorderBrush}" StrokeThickness="1" StrokeDashArray="4 3"/>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="28,0">
+                                <TextBlock Text="&#xE8B2;" FontFamily="{StaticResource IconFont}" FontSize="16"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="Přetáhni sem materiál a začni vytvářet" FontSize="13"
+                                           VerticalAlignment="Center" Margin="12,0,0,0"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Ukazatel pozice prehravani -->
+                        <Grid Grid.Row="0" Grid.RowSpan="2" HorizontalAlignment="Left" Margin="91,0,0,8">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Border Width="11" Height="14" CornerRadius="2,2,5,5" Background="{StaticResource TextPrimary}" Margin="0,4,0,0"/>
+                            <Rectangle Grid.Row="1" Width="1" Fill="{StaticResource TextPrimary}"/>
+                        </Grid>
+                    </Grid>
+                </DockPanel>
+            </Border>
+        </Grid>
     </Grid>
 </Window>
