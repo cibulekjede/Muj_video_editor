@@ -9,7 +9,8 @@ public enum MediaKind
 {
     Video,
     Image,
-    Audio
+    Audio,
+    Text
 }
 
 /// <summary>
@@ -26,6 +27,9 @@ public class MediaItem : INotifyPropertyChanged
         "|Videa|" + Patterns(VideoExtensions) +
         "|Obrázky|" + Patterns(ImageExtensions) +
         "|Zvuk|" + Patterns(AudioExtensions);
+
+    /// <summary>Spolecne "medium" vsech textovych klipu (text sam je v TimelineClip.Overlay).</summary>
+    public static readonly MediaItem TextPlaceholder = new("Text", MediaKind.Text);
 
     private ImageSource? _thumbnail;
     private TimeSpan? _duration;
@@ -44,6 +48,7 @@ public class MediaItem : INotifyPropertyChanged
     {
         MediaKind.Video => "Video",
         MediaKind.Image => "Obrázek",
+        MediaKind.Text => "Text",
         _ => "Zvuk"
     };
 

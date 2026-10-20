@@ -7,6 +7,43 @@
             <StackPanel Orientation="Horizontal"/>
         </ItemsPanelTemplate>
 
+        <!-- Stopa Text: klipy maji volnou pozici -->
+        <ItemsPanelTemplate x:Key="FreeTrackPanel">
+            <Canvas/>
+        </ItemsPanelTemplate>
+        <Style x:Key="FreeTrackItem" TargetType="ContentPresenter">
+            <Setter Property="Canvas.Left" Value="{Binding Left}"/>
+            <Setter Property="Height" Value="32"/>
+        </Style>
+
+        <!-- Textovy klip -->
+        <DataTemplate x:Key="TextClipTemplate" DataType="{x:Type models:TimelineClip}">
+            <Grid Width="{Binding Width}" Background="Transparent" Cursor="Hand" ToolTip="{Binding DisplayName}"
+                  MouseLeftButtonDown="Clip_MouseLeftButtonDown">
+                <Border CornerRadius="4" Margin="0,0,1,0" Background="#5A3D8C"/>
+                <StackPanel Orientation="Horizontal" Margin="10,0" VerticalAlignment="Center" ClipToBounds="True">
+                    <TextBlock Text="&#xE8D2;" FontFamily="{StaticResource IconFont}" FontSize="11" Foreground="#D9C6FF"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding DisplayName}" FontSize="11" Foreground="White" Margin="6,0,0,0"
+                               MaxWidth="220" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+                <Border x:Name="Frame" CornerRadius="4" Margin="0,0,1,0" BorderThickness="2"
+                        BorderBrush="Transparent" IsHitTestVisible="False"/>
+                <Border x:Name="LeftHandle" Tag="Left" Width="8" HorizontalAlignment="Left" CornerRadius="4,0,0,4"
+                        Background="Transparent" Cursor="SizeWE" MouseLeftButtonDown="TrimHandle_MouseLeftButtonDown"/>
+                <Border x:Name="RightHandle" Tag="Right" Width="8" HorizontalAlignment="Right" CornerRadius="0,4,4,0"
+                        Margin="0,0,1,0" Background="Transparent" Cursor="SizeWE"
+                        MouseLeftButtonDown="TrimHandle_MouseLeftButtonDown"/>
+            </Grid>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter TargetName="Frame" Property="BorderBrush" Value="White"/>
+                    <Setter TargetName="LeftHandle" Property="Background" Value="White"/>
+                    <Setter TargetName="RightHandle" Property="Background" Value="White"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
         <!-- Klip ve stope Video (video nebo obrazek) -->
         <DataTemplate x:Key="VideoClipTemplate" DataType="{x:Type models:TimelineClip}">
             <Grid Width="{Binding Width}" Background="Transparent" Cursor="Hand" ToolTip="{Binding Media.Name}"
@@ -109,7 +146,13 @@
 
             <!-- ===== Popisky stop ===== -->
             <StackPanel Grid.Column="0" Margin="10,36,0,0">
-                <StackPanel Height="66" Orientation="Horizontal">
+                <StackPanel Height="32" Orientation="Horizontal">
+                    <TextBlock Text="&#xE8D2;" FontFamily="{StaticResource IconFont}" FontSize="13"
+                               Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                    <TextBlock Text="Text" Style="{StaticResource SecondaryText}" FontSize="12"
+                               VerticalAlignment="Center" Margin="8,0,0,0"/>
+                </StackPanel>
+                <StackPanel Height="66" Orientation="Horizontal" Margin="0,6,0,0">
                     <TextBlock Text="&#xE714;" FontFamily="{StaticResource IconFont}" FontSize="13"
                                Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
                     <TextBlock Text="Video" Style="{StaticResource SecondaryText}" FontSize="12"
@@ -134,6 +177,8 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="26"/>  <!-- Casove pravitko -->
                         <RowDefinition Height="10"/>
+                        <RowDefinition Height="32"/>  <!-- Text -->
+                        <RowDefinition Height="6"/>
                         <RowDefinition Height="66"/>  <!-- Video -->
                         <RowDefinition Height="8"/>
                         <RowDefinition Height="40"/>  <!-- Zvuk -->
@@ -144,14 +189,18 @@
 
                     <Border Grid.Row="2" Background="#17171A" CornerRadius="4"/>
                     <Border Grid.Row="4" Background="#17171A" CornerRadius="4"/>
+                    <Border Grid.Row="6" Background="#17171A" CornerRadius="4"/>
 
-                    <ItemsControl x:Name="VideoTrack" Grid.Row="2" HorizontalAlignment="Left"
+                    <ItemsControl x:Name="TextTrack" Grid.Row="2" HorizontalAlignment="Left"
+                                  ItemsPanel="{StaticResource FreeTrackPanel}" ItemTemplate="{StaticResource TextClipTemplate}"
+                                  ItemContainerStyle="{StaticResource FreeTrackItem}"/>
+                    <ItemsControl x:Name="VideoTrack" Grid.Row="4" HorizontalAlignment="Left"
                                   ItemsPanel="{StaticResource TrackPanel}" ItemTemplate="{StaticResource VideoClipTemplate}"/>
-                    <ItemsControl x:Name="AudioTrack" Grid.Row="4" HorizontalAlignment="Left"
+                    <ItemsControl x:Name="AudioTrack" Grid.Row="6" HorizontalAlignment="Left"
                                   ItemsPanel="{StaticResource TrackPanel}" ItemTemplate="{StaticResource AudioClipTemplate}"/>
 
                     <!-- Prazdna casova osa -->
-                    <Grid x:Name="EmptyHint" Grid.Row="2" IsHitTestVisible="False">
+                    <Grid x:Name="EmptyHint" Grid.Row="4" IsHitTestVisible="False">
                         <Rectangle RadiusX="4" RadiusY="4" Stroke="{StaticResource BorderBrush}"
                                    StrokeThickness="1" StrokeDashArray="4 3"/>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="24,0">
@@ -163,7 +212,7 @@
                     </Grid>
 
                     <!-- Ukazatel pozice prehravani -->
-                    <Canvas Grid.RowSpan="6" IsHitTestVisible="False">
+                    <Canvas Grid.RowSpan="8" IsHitTestVisible="False">
                         <Grid x:Name="PlayheadMarker" Width="11" Height="{Binding ActualHeight, ElementName=ContentGrid}">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>

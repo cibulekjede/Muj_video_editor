@@ -64,7 +64,8 @@ public partial class FfmpegExporter(string ffmpegPath)
 
         var videoDuration = Sum(timeline.VideoClips);
         var audioDuration = Sum(timeline.AudioClips);
-        var totalDuration = videoDuration > audioDuration ? videoDuration : audioDuration;
+        var textEnd = timeline.Texts.Count == 0 ? TimeSpan.Zero : timeline.Texts.Max(c => c.End);
+        var totalDuration = new[] { videoDuration, audioDuration, textEnd }.Max();
 
         // ===== Stopa Video (+ zvuk z videi) =====
         foreach (var clip in timeline.VideoClips)
@@ -109,14 +110,31 @@ public partial class FfmpegExporter(string ffmpegPath)
         if (segmentCount == 1)
         {
             // Stary FFmpeg neumi concat s jedinym vstupem
-            filters.Add("[v0]null[vout]");
+            filters.Add("[v0]null[vcat]");
             filters.Add("[a0]anull[amain]");
         }
         else
         {
             string segments = string.Concat(Enumerable.Range(0, segmentCount).Select(i => $"[v{i}][a{i}]"));
-            filters.Add($"{segments}concat=n={segmentCount}:v=1:a=1[vout][amain]");
+            filters.Add($"{segments}concat=n={segmentCount}:v=1:a=1[vcat][amain]");
         }
+
+        // ===== Stopa Text =====
+        string tempDir = Path.Combine(Path.GetTempPath(), "MujVideoEditor", Guid.NewGuid().ToString("N"));
+        var textFilters = new List<string>();
+        for (int i = 0; i < timeline.Texts.Count; i++)
+        {
+            var clip = timeline.Texts[i];
+            if (clip.Overlay is not { } overlay || string.IsNullOrWhiteSpace(overlay.Text))
+                continue;
+
+            // Text predavame souborem: odpadne slozite escapovani diakritiky, uvozovek a dvojtecek
+            Directory.CreateDirectory(tempDir);
+            string textFile = Path.Combine(tempDir, $"text{i}.txt");
+            await File.WriteAllTextAsync(textFile, overlay.Text.Replace("\r\n", "\n"), new UTF8Encoding(false), cancellationToken);
+            textFilters.Add(DrawText(overlay, textFile, clip.Start, clip.End, settings, fastSeek));
+        }
+        filters.Add(textFilters.Count == 0 ? "[vcat]null[vout]" : $"[vcat]{string.Join(",", textFilters)}[vout]");
 
         // ===== Stopa Zvuk =====
         string audioOut = "[amain]";
@@ -147,8 +165,81 @@ public partial class FfmpegExporter(string ffmpegPath)
         args.AddRange(["-c:a", "aac", "-strict", "-2", "-b:a", "192k"]);
         args.AddRange(["-r", settings.FramesPerSecond.ToString(Inv), "-movflags", "+faststart", settings.OutputPath]);
 
-        await RunEncoderAsync(args, totalDuration, progress, cancellationToken, settings.OutputPath);
+        try
+        {
+            await RunEncoderAsync(args, totalDuration, progress, cancellationToken, settings.OutputPath);
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(tempDir))
+                    Directory.Delete(tempDir, recursive: true);
+            }
+            catch (IOException)
+            {
+                // Docasne soubory s textem se nepodarilo smazat - nevadi
+            }
+        }
     }
+
+    private static readonly Dictionary<string, (string Regular, string Bold)> FontFiles = new()
+    {
+        ["Segoe UI"] = ("segoeui.ttf", "segoeuib.ttf"),
+        ["Arial"] = ("arial.ttf", "arialbd.ttf"),
+        ["Impact"] = ("impact.ttf", "impact.ttf"),
+        ["Georgia"] = ("georgia.ttf", "georgiab.ttf"),
+        ["Comic Sans MS"] = ("comic.ttf", "comicbd.ttf"),
+        ["Consolas"] = ("consola.ttf", "consolab.ttf")
+    };
+
+    private static string FontFile(TextOverlay overlay)
+    {
+        string fontsDir = Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
+        var files = FontFiles.GetValueOrDefault(overlay.FontFamily, FontFiles["Arial"]);
+        string path = Path.Combine(fontsDir, overlay.Bold ? files.Bold : files.Regular);
+        return File.Exists(path) ? path : Path.Combine(fontsDir, "arial.ttf");
+    }
+
+    /// <summary>Filtr drawtext pro jeden text (velikosti jsou definovane pro vysku 1080 px).</summary>
+    private static string DrawText(TextOverlay overlay, string textFile, TimeSpan start, TimeSpan end,
+        ExportSettings settings, bool modern)
+    {
+        double scale = settings.Height / 1080.0;
+        string color = overlay.Color.TrimStart('#');
+        var parts = new List<string>
+        {
+            $"fontfile='{FilterPath(FontFile(overlay))}'",
+            $"textfile='{FilterPath(textFile)}'",
+            $"fontsize={Math.Max(1, Math.Round(overlay.FontSize * scale)).ToString(Inv)}",
+            $"fontcolor=0x{color}",
+            $"x='{overlay.X.ToString("0.####", Inv)}*w-text_w/2'",
+            $"y='{overlay.Y.ToString("0.####", Inv)}*h-text_h/2'"
+        };
+
+        if (overlay.HasBackground)
+        {
+            parts.Add("box=1:boxcolor=black@0.5");
+            if (modern)
+                parts.Add($"boxborderw={Math.Round(10 * scale).ToString(Inv)}");
+        }
+
+        if (overlay.HasShadow)
+        {
+            string offset = Math.Max(1, Math.Round(3 * scale)).ToString(Inv);
+            parts.Add($"shadowcolor=black@0.6:shadowx={offset}:shadowy={offset}");
+        }
+
+        // Novejsi FFmpeg ma volbu enable, stary jen draw
+        string window = $"between(t,{Sec(start)},{Sec(end)})";
+        parts.Add(modern ? $"enable='{window}'" : $"draw='{window}'");
+
+        return "drawtext=" + string.Join(":", parts);
+    }
+
+    /// <summary>Cesta k souboru ve tvaru, kteremu rozumi filtry FFmpeg (C\:/slozka/soubor).</summary>
+    private static string FilterPath(string path) =>
+        path.Replace('\\', '/').Replace(":", "\\:").Replace("'", "'\\''");
 
     private async Task RunEncoderAsync(List<string> args, TimeSpan totalDuration, IProgress<double> progress,
         CancellationToken cancellationToken, string outputPath)

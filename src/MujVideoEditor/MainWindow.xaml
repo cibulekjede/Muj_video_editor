@@ -188,18 +188,23 @@
                         <Border DockPanel.Dock="Top" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1"
                                 Padding="6,4">
                             <StackPanel Orientation="Horizontal">
-                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE714;" Content="Média" IsChecked="True"/>
-                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE8D6;" Content="Zvuk"/>
-                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE8D2;" Content="Text"/>
-                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE76E;" Content="Nálepky"/>
-                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE945;" Content="Efekty"/>
-                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE8AB;" Content="Přechody"/>
-                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE7F0;" Content="Titulky"/>
-                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE71C;" Content="Filtry"/>
+                                <RadioButton x:Name="MediaTab" Style="{StaticResource CategoryTab}" Tag="&#xE714;" Content="Média"
+                                             IsChecked="True" Checked="CategoryTab_Checked"/>
+                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE8D6;" Content="Zvuk" Checked="CategoryTab_Checked"/>
+                                <RadioButton x:Name="TextTab" Style="{StaticResource CategoryTab}" Tag="&#xE8D2;" Content="Text"
+                                             Checked="CategoryTab_Checked"/>
+                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE76E;" Content="Nálepky" Checked="CategoryTab_Checked"/>
+                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE945;" Content="Efekty" Checked="CategoryTab_Checked"/>
+                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE8AB;" Content="Přechody" Checked="CategoryTab_Checked"/>
+                                <RadioButton x:Name="SubtitlesTab" Style="{StaticResource CategoryTab}" Tag="&#xE7F0;" Content="Titulky"
+                                             Checked="CategoryTab_Checked"/>
+                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE71C;" Content="Filtry" Checked="CategoryTab_Checked"/>
                             </StackPanel>
                         </Border>
 
                         <Grid>
+                        <!-- ===== Kategorie Media ===== -->
+                        <Grid x:Name="MediaCategoryPanel">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="150"/>
                                 <ColumnDefinition Width="*"/>
@@ -268,6 +273,67 @@
                                 </DockPanel>
                             </Grid>
                         </Grid>
+
+                        <!-- ===== Kategorie Text: predlohy textu ===== -->
+                        <ScrollViewer x:Name="TextCategoryPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="16">
+                                <TextBlock Text="Přidat text" FontSize="14" FontWeight="SemiBold"/>
+                                <TextBlock Text="Klikni na předlohu a text se přidá na pozici přehrávání."
+                                           Style="{StaticResource SecondaryText}" Margin="0,4,0,12"/>
+                                <WrapPanel>
+                                    <WrapPanel.Resources>
+                                        <Style x:Key="PresetTile" TargetType="Button">
+                                            <Setter Property="Width" Value="150"/>
+                                            <Setter Property="Height" Value="84"/>
+                                            <Setter Property="Margin" Value="0,0,10,10"/>
+                                            <Setter Property="Cursor" Value="Hand"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="Bd" Background="#111114" CornerRadius="6" BorderThickness="2"
+                                                                BorderBrush="Transparent">
+                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </WrapPanel.Resources>
+                                    <Button Style="{StaticResource PresetTile}" Tag="Default" Click="TextPreset_Click" ToolTip="Výchozí text">
+                                        <TextBlock Text="Tvůj text" FontSize="20" FontWeight="Bold" Foreground="White"/>
+                                    </Button>
+                                    <Button Style="{StaticResource PresetTile}" Tag="Subtitle" Click="TextPreset_Click" ToolTip="Titulek dole s pozadím">
+                                        <Border Background="#80000000" Padding="6,2">
+                                            <TextBlock Text="Titulek" FontSize="16" Foreground="White"/>
+                                        </Border>
+                                    </Button>
+                                    <Button Style="{StaticResource PresetTile}" Tag="Headline" Click="TextPreset_Click" ToolTip="Velký nadpis">
+                                        <TextBlock Text="NADPIS" FontFamily="Impact" FontSize="28" Foreground="White"/>
+                                    </Button>
+                                    <Button Style="{StaticResource PresetTile}" Tag="Yellow" Click="TextPreset_Click" ToolTip="Žlutý text">
+                                        <TextBlock Text="Wow!" FontFamily="Arial" FontSize="26" FontWeight="Bold" Foreground="#FFDD00"/>
+                                    </Button>
+                                    <Button Style="{StaticResource PresetTile}" Tag="Comic" Click="TextPreset_Click" ToolTip="Vtipný text">
+                                        <TextBlock Text="Haha!" FontFamily="Comic Sans MS" FontSize="22" FontWeight="Bold" Foreground="#FF8AD8"/>
+                                    </Button>
+                                </WrapPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- ===== Kategorie, ktere jeste nejsou hotove ===== -->
+                        <StackPanel x:Name="ComingSoonPanel" Visibility="Collapsed" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="&#xE823;" FontFamily="{StaticResource IconFont}" FontSize="32"
+                                       Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Připravujeme" FontSize="14" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                            <TextBlock Text="Tahle část editoru ještě není hotová." Style="{StaticResource SecondaryText}"
+                                       HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        </Grid>
                     </DockPanel>
                 </Border>
 
@@ -327,6 +393,10 @@
                                 <TextBlock x:Name="PreviewMessage" Visibility="Collapsed" FontSize="40"
                                            Foreground="{StaticResource TextSecondary}" TextAlignment="Center"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <!-- Texty z casove osy (lze je tahat mysi) -->
+                                <Canvas x:Name="TextLayer" ClipToBounds="True"
+                                        MouseMove="TextLayer_MouseMove" MouseLeftButtonUp="TextLayer_MouseLeftButtonUp"
+                                        LostMouseCapture="TextLayer_LostMouseCapture"/>
                             </Grid>
                         </Viewbox>
                     </DockPanel>
@@ -338,14 +408,47 @@
                 <Border Grid.Column="4" Style="{StaticResource Panel}">
                     <DockPanel>
                         <Border DockPanel.Dock="Top" Style="{StaticResource PanelHeader}">
-                            <TextBlock Text="Podrobnosti" Style="{StaticResource PanelTitle}" Foreground="{StaticResource Accent}"/>
-                        </Border>
-
-                        <Border DockPanel.Dock="Bottom" Padding="14,10" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
-                            <Button Style="{StaticResource ToolButton}" Content="Upravit" HorizontalAlignment="Right" Padding="20,6"/>
+                            <TextBlock x:Name="DetailsTitle" Text="Podrobnosti" Style="{StaticResource PanelTitle}"
+                                       Foreground="{StaticResource Accent}"/>
                         </Border>
 
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                            <!-- ===== Editor textu (kdyz je vybrany textovy klip) ===== -->
+                            <StackPanel x:Name="TextEditorPanel" Visibility="Collapsed" Margin="14,16,14,16">
+                                <TextBlock Text="Text" Style="{StaticResource SecondaryText}" Margin="0,0,0,6"/>
+                                <TextBox x:Name="TextContentBox" AcceptsReturn="True" TextWrapping="Wrap" Height="76"
+                                         VerticalScrollBarVisibility="Auto" TextChanged="TextContentBox_TextChanged"/>
+
+                                <TextBlock Text="Písmo" Style="{StaticResource SecondaryText}" Margin="0,16,0,6"/>
+                                <WrapPanel x:Name="FontChoices"/>
+
+                                <DockPanel Margin="0,10,0,6">
+                                    <TextBlock x:Name="FontSizeText" DockPanel.Dock="Right" Style="{StaticResource SecondaryText}"/>
+                                    <TextBlock Text="Velikost" Style="{StaticResource SecondaryText}"/>
+                                </DockPanel>
+                                <Slider x:Name="FontSizeSlider" Minimum="20" Maximum="250" ValueChanged="FontSizeSlider_ValueChanged"/>
+
+                                <TextBlock Text="Barva" Style="{StaticResource SecondaryText}" Margin="0,16,0,6"/>
+                                <WrapPanel x:Name="ColorChoices"/>
+
+                                <TextBlock Text="Styl" Style="{StaticResource SecondaryText}" Margin="0,16,0,6"/>
+                                <WrapPanel>
+                                    <CheckBox x:Name="BoldCheck" Style="{StaticResource ChipCheck}" Content="Tučné" Click="TextStyle_Click"/>
+                                    <CheckBox x:Name="ShadowCheck" Style="{StaticResource ChipCheck}" Content="Stín" Click="TextStyle_Click"/>
+                                    <CheckBox x:Name="BackgroundCheck" Style="{StaticResource ChipCheck}" Content="Pozadí" Click="TextStyle_Click"/>
+                                </WrapPanel>
+
+                                <TextBlock Text="Pozice" Style="{StaticResource SecondaryText}" Margin="0,16,0,6"/>
+                                <WrapPanel>
+                                    <Button Style="{StaticResource ToolButton}" Content="Nahoře" Tag="0.12" Margin="0,0,6,0" Click="TextPosition_Click"/>
+                                    <Button Style="{StaticResource ToolButton}" Content="Uprostřed" Tag="0.5" Margin="0,0,6,0" Click="TextPosition_Click"/>
+                                    <Button Style="{StaticResource ToolButton}" Content="Dole" Tag="0.88" Click="TextPosition_Click"/>
+                                </WrapPanel>
+                                <TextBlock Text="Text můžeš v náhledu i přetáhnout myší." Style="{StaticResource SecondaryText}"
+                                           Margin="0,8,0,0"/>
+                            </StackPanel>
+
                             <!-- Radky se plni z kodu: podrobnosti projektu, nebo vybraneho media -->
                             <ItemsControl x:Name="DetailsList" Margin="14,18,14,0">
                                 <ItemsControl.ItemTemplate>
@@ -361,6 +464,7 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                            </StackPanel>
                         </ScrollViewer>
                     </DockPanel>
                 </Border>

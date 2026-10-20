@@ -5,26 +5,44 @@ namespace MujVideoEditor.Models;
 
 /// <summary>
 /// Klip na casove ose: usek zdrojoveho media od SourceIn do SourceOut.
+/// Textovy klip ma misto media Overlay a jeho SourceIn/SourceOut urcuji jen delku.
 /// </summary>
 public class TimelineClip : INotifyPropertyChanged
 {
     public static readonly TimeSpan MinDuration = TimeSpan.FromSeconds(0.1);
     public static readonly TimeSpan DefaultImageDuration = TimeSpan.FromSeconds(5);
+    public static readonly TimeSpan DefaultTextDuration = TimeSpan.FromSeconds(3);
     public static readonly TimeSpan MaxImageDuration = TimeSpan.FromHours(1);
 
     private TimeSpan _sourceIn;
     private TimeSpan _sourceOut;
     private double _width;
+    private double _left;
     private bool _isSelected;
 
-    public TimelineClip(MediaItem media, TimeSpan sourceIn, TimeSpan sourceOut)
+    public TimelineClip(MediaItem media, TimeSpan sourceIn, TimeSpan sourceOut, TextOverlay? overlay = null)
     {
         Media = media;
         _sourceIn = sourceIn;
         _sourceOut = sourceOut;
+        Overlay = overlay;
+        if (overlay is not null)
+            overlay.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(TextOverlay.Text))
+                    OnPropertyChanged(nameof(DisplayName));
+            };
     }
 
+    public static TimelineClip CreateText(TextOverlay overlay, TimeSpan start, TimeSpan duration) =>
+        new(MediaItem.TextPlaceholder, TimeSpan.Zero, duration, overlay) { Start = start };
+
     public MediaItem Media { get; }
+    public TextOverlay? Overlay { get; }
+    public bool IsText => Media.Kind == MediaKind.Text;
+
+    /// <summary>Popisek na casove ose: nazev souboru, u textu prvni radek textu.</summary>
+    public string DisplayName => Overlay is { } o ? o.Text.Split('\n')[0].Trim() : Media.Name;
 
     /// <summary>Kde ve zdrojovem souboru klip zacina.</summary>
     public TimeSpan SourceIn
@@ -43,11 +61,12 @@ public class TimelineClip : INotifyPropertyChanged
     public TimeSpan Duration => SourceOut - SourceIn;
     public string DurationText => Duration.ToString(@"mm\:ss\.f");
 
-    /// <summary>Nejdal, kam lze klip prodlouzit (obrazek lze natahnout libovolne).</summary>
+    /// <summary>Nejdal, kam lze klip prodlouzit (obrazek a text lze natahnout libovolne).</summary>
     public TimeSpan MaxSourceOut =>
-        Media.Kind == MediaKind.Image ? MaxImageDuration : Media.Duration ?? SourceOut;
+        Media.Kind is MediaKind.Image or MediaKind.Text ? MaxImageDuration : Media.Duration ?? SourceOut;
 
-    /// <summary>Zacatek klipu na casove ose; nastavuje Timeline.Relayout.</summary>
+    /// <summary>Zacatek klipu na casove ose. Ve stope Video/Zvuk ho nastavuje Timeline.Relayout,
+    /// textovy klip ma vlastni volnou pozici.</summary>
     public TimeSpan Start { get; set; }
     public TimeSpan End => Start + Duration;
 
@@ -58,13 +77,20 @@ public class TimelineClip : INotifyPropertyChanged
         set { _width = value; OnPropertyChanged(); }
     }
 
+    /// <summary>Levy okraj klipu v pixelech (pouziva stopa Text).</summary>
+    public double Left
+    {
+        get => _left;
+        set { _left = value; OnPropertyChanged(); }
+    }
+
     public bool IsSelected
     {
         get => _isSelected;
         set { _isSelected = value; OnPropertyChanged(); }
     }
 
-    public TimelineClip Clone() => new(Media, SourceIn, SourceOut);
+    public TimelineClip Clone() => new(Media, SourceIn, SourceOut, Overlay?.Clone()) { Start = Start };
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

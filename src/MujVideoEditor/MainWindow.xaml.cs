@@ -423,6 +423,10 @@ public partial class MainWindow : Window
         SeekSlider.Value = 0;
         CurrentTimeText.Text = FormatTimecode(TimeSpan.Zero);
         TotalTimeText.Text = FormatTimecode(TimeSpan.Zero);
+
+        ShowTextEditor(null);
+        TextLayer.Children.Clear();
+        _shownTexts = [];
         ShowProjectDetails();
     }
 
@@ -659,9 +663,10 @@ public partial class MainWindow : Window
         if (_mode != PreviewMode.Timeline)
             return;
 
+        ShowTextEditor(clip);
         if (clip is null)
             ShowProjectDetails();
-        else
+        else if (!clip.IsText)
             ShowClipDetails(clip);
     }
 
@@ -744,6 +749,8 @@ public partial class MainWindow : Window
 
         // Stopa Zvuk
         SyncElement(AudioPlayer, _audioState, audioHit?.Clip, audioHit?.Offset ?? TimeSpan.Zero);
+
+        RenderTexts(position);
 
         if (!_isSeeking)
             SeekSlider.Value = position.TotalSeconds;

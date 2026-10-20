@@ -36,6 +36,7 @@ public partial class TimelineView : UserControl
     private bool _trimLeft;
     private TimeSpan _trimOriginalIn;
     private TimeSpan _trimOriginalOut;
+    private TimeSpan _originalStart;
     private TimelineState? _stateBeforeGesture;
 
     public TimelineView()
@@ -43,6 +44,7 @@ public partial class TimelineView : UserControl
         InitializeComponent();
         VideoTrack.ItemsSource = Model.VideoClips;
         AudioTrack.ItemsSource = Model.AudioClips;
+        TextTrack.ItemsSource = Model.TextClips;
         _pixelsPerSecond = PixelsPerSecondFromZoom(ZoomSlider.Value);
         Loaded += (_, _) => Relayout();
         UpdateButtons();
@@ -103,12 +105,49 @@ public partial class TimelineView : UserControl
         Activated?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>Prida text na pozici ukazatele (nebo za nejblizsi text, aby se neprekryvaly).</summary>
+    public void AddText(TextOverlay overlay)
+    {
+        PushUndo();
+        var start = Model.FreeTextSlot(_playhead, TimelineClip.DefaultTextDuration);
+        var clip = TimelineClip.CreateText(overlay, start, TimelineClip.DefaultTextDuration);
+        Model.TextClips.Add(clip);
+
+        SelectClip(clip);
+        OnModelChanged();
+        Activated?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void SelectClip(TimelineClip? clip)
+    {
+        if (_selectedClip == clip)
+            return;
+
+        if (_selectedClip is not null)
+            _selectedClip.IsSelected = false;
+        _selectedClip = clip;
+        if (clip is not null)
+            clip.IsSelected = true;
+
+        UpdateButtons();
+        SelectedClipChanged?.Invoke(this, clip);
+    }
+
+    /// <summary>Ulozi stav pred zmenou, ktera probehla mimo casovou osu (napr. uprava textu), aby sla vratit.</summary>
+    public void PushUndoState(TimelineState stateBeforeChange)
+    {
+        _undoStack.Push(stateBeforeChange);
+        _redoStack.Clear();
+        UpdateButtons();
+    }
+
     public void SplitAtPlayhead()
     {
-        // Vybrany klip pod ukazatelem, jinak klip pod ukazatelem ve stope Video, pak Zvuk
+        // Vybrany klip pod ukazatelem, jinak klip pod ukazatelem ve stope Video, Zvuk, Text
         var clip = _selectedClip is { } selected && _playhead >= selected.Start && _playhead < selected.End
             ? selected
-            : (Model.ClipAt(TrackKind.Video, _playhead) ?? Model.ClipAt(TrackKind.Audio, _playhead))?.Clip;
+            : (Model.ClipAt(TrackKind.Video, _playhead) ?? Model.ClipAt(TrackKind.Audio, _playhead)
+               ?? Model.ClipAt(TrackKind.Text, _playhead))?.Clip;
 
         if (clip is null || !Model.CanSplit(clip, _playhead))
             return;
@@ -243,21 +282,6 @@ public partial class TimelineView : UserControl
     private static string FormatRulerTime(TimeSpan t) =>
         t.TotalHours >= 1 ? t.ToString(@"h\:mm\:ss") : t.ToString(@"mm\:ss");
 
-    private void SelectClip(TimelineClip? clip)
-    {
-        if (_selectedClip == clip)
-            return;
-
-        if (_selectedClip is not null)
-            _selectedClip.IsSelected = false;
-        _selectedClip = clip;
-        if (clip is not null)
-            clip.IsSelected = true;
-
-        UpdateButtons();
-        SelectedClipChanged?.Invoke(this, clip);
-    }
-
     private void UpdateButtons()
     {
         UndoButton.IsEnabled = _undoStack.Count > 0;
@@ -325,6 +349,7 @@ public partial class TimelineView : UserControl
         SelectClip(clip);
         _dragClip = clip;
         _dragStartX = e.GetPosition(ContentGrid).X;
+        _originalStart = clip.Start;
         _dragMoved = false;
         _stateBeforeGesture = Model.Snapshot();
         ContentGrid.CaptureMouse();
@@ -343,6 +368,7 @@ public partial class TimelineView : UserControl
         _dragStartX = e.GetPosition(ContentGrid).X;
         _trimOriginalIn = clip.SourceIn;
         _trimOriginalOut = clip.SourceOut;
+        _originalStart = clip.Start;
         _stateBeforeGesture = Model.Snapshot();
         ContentGrid.CaptureMouse();
         e.Handled = true;
@@ -406,7 +432,23 @@ public partial class TimelineView : UserControl
         var delta = TimeSpan.FromSeconds((x - _dragStartX) / _pixelsPerSecond);
         var oldDuration = clip.Duration;
 
-        if (clip.Media.Kind == MediaKind.Image)
+        if (clip.IsText)
+        {
+            // Text: levy okraj posouva zacatek (konec zustava), pravy meni delku
+            if (_trimLeft)
+            {
+                var end = _originalStart + (_trimOriginalOut - _trimOriginalIn);
+                var newStart = Clamp(_originalStart + delta, TimeSpan.Zero, end - TimelineClip.MinDuration);
+                clip.Start = newStart;
+                clip.SourceIn = TimeSpan.Zero;
+                clip.SourceOut = end - newStart;
+            }
+            else
+            {
+                clip.SourceOut = Clamp(_trimOriginalOut + delta, clip.SourceIn + TimelineClip.MinDuration, clip.MaxSourceOut);
+            }
+        }
+        else if (clip.Media.Kind == MediaKind.Image)
         {
             // Obrazek nema "zdroj", oba okraje jen meni jeho delku
             var newOut = _trimLeft ? _trimOriginalOut - delta : _trimOriginalOut + delta;
@@ -430,6 +472,18 @@ public partial class TimelineView : UserControl
 
     private void MoveClipTo(TimelineClip clip, double x)
     {
+        if (clip.IsText)
+        {
+            // Text se posouva volne
+            var newStart = TimeSpan.FromSeconds(Math.Max(0, (_originalStart.TotalSeconds * _pixelsPerSecond + x - _dragStartX) / _pixelsPerSecond));
+            if (newStart == clip.Start)
+                return;
+            CommitGestureUndo();
+            clip.Start = newStart;
+            OnModelChanged();
+            return;
+        }
+
         var track = Model.TrackOf(clip);
         int oldIndex = track.IndexOf(clip);
         int newIndex = InsertionIndex(track.Where(c => c != clip), x);

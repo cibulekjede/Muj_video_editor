@@ -23,7 +23,11 @@ public static class ProjectSerializer
 
     private record ClipData(int Media, double In, double Out);
 
-    private record ProjectData(int Version, List<MediaData> Media, List<ClipData> VideoClips, List<ClipData> AudioClips);
+    private record TextData(double Start, double Duration, string Text, string Font, double Size, string Color,
+        bool Bold, bool Shadow, bool Background, double X, double Y);
+
+    private record ProjectData(int Version, List<MediaData> Media, List<ClipData> VideoClips, List<ClipData> AudioClips,
+        List<TextData>? Texts = null);
 
     public record LoadedProject(List<MediaItem> Media, TimelineState Timeline, List<string> MissingFiles);
 
@@ -47,7 +51,10 @@ public static class ProjectSerializer
             // Relativni cesta pomuze, kdyz se slozka s projektem i videi presune jinam
             media.Select(m => new MediaData(m.FilePath, Path.GetRelativePath(projectDir, m.FilePath))).ToList(),
             timeline.VideoClips.Select(ToData).ToList(),
-            timeline.AudioClips.Select(ToData).ToList());
+            timeline.AudioClips.Select(ToData).ToList(),
+            timeline.Texts.Where(c => c.Overlay is not null).Select(c => new TextData(
+                c.Start.TotalSeconds, c.Duration.TotalSeconds, c.Overlay!.Text, c.Overlay.FontFamily, c.Overlay.FontSize,
+                c.Overlay.Color, c.Overlay.Bold, c.Overlay.HasShadow, c.Overlay.HasBackground, c.Overlay.X, c.Overlay.Y)).ToList());
 
         // Nejdriv do docasneho souboru, at pri chybe neprijdeme o puvodni projekt
         string tempPath = projectPath + ".tmp";
@@ -87,9 +94,25 @@ public static class ProjectSerializer
             .Select(c => new TimelineClip(media[c.Media]!, TimeSpan.FromSeconds(c.In), TimeSpan.FromSeconds(c.Out)))
             .ToList();
 
+        var texts = (data.Texts ?? [])
+            .Where(t => t.Duration > 0)
+            .Select(t => TimelineClip.CreateText(new TextOverlay
+            {
+                Text = t.Text ?? "",
+                FontFamily = t.Font ?? "Segoe UI",
+                FontSize = t.Size,
+                Color = t.Color ?? "#FFFFFF",
+                Bold = t.Bold,
+                HasShadow = t.Shadow,
+                HasBackground = t.Background,
+                X = t.X,
+                Y = t.Y
+            }, TimeSpan.FromSeconds(t.Start), TimeSpan.FromSeconds(t.Duration)))
+            .ToList();
+
         return new LoadedProject(
             media.OfType<MediaItem>().ToList(),
-            new TimelineState(ToClips(data.VideoClips), ToClips(data.AudioClips)),
+            new TimelineState(ToClips(data.VideoClips), ToClips(data.AudioClips), texts),
             missing);
     }
 
