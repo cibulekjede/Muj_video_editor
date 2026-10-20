@@ -4,8 +4,8 @@ Vlastní open source video editor ve stylu CapCut, napsaný v C# (.NET 10, WPF).
 
 ## Plánované funkce
 
-- [ ] Import videí, obrázků a zvuku
-- [ ] Náhled videa
+- [x] Import videí, obrázků a zvuku (tlačítkem i přetažením)
+- [x] Náhled videa (přehrát/pozastavit mezerníkem, posuvník)
 - [ ] Časová osa (timeline) s více stopami
 - [ ] Stříhání a dělení klipů
 - [ ] Text a titulky

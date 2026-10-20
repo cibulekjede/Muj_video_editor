@@ -4,7 +4,9 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MujVideoEditor"
+        xmlns:models="clr-namespace:MujVideoEditor.Models"
         mc:Ignorable="d"
+        PreviewKeyDown="Window_PreviewKeyDown"
         Title="Můj video editor" Height="900" Width="1600"
         MinHeight="640" MinWidth="1100"
         WindowStartupLocation="CenterScreen"
@@ -17,6 +19,65 @@
         <WindowChrome CaptionHeight="40" ResizeBorderThickness="6" GlassFrameThickness="0"
                       CornerRadius="0" UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <!-- Dlazdice v knihovne medii -->
+        <Style x:Key="MediaTileContainer" TargetType="ListBoxItem">
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="ToolTip" Value="{Binding FilePath}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd" Background="Transparent" BorderBrush="Transparent"
+                                BorderThickness="2" CornerRadius="6" Padding="4">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource HoverBackground}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <DataTemplate x:Key="MediaTile" DataType="{x:Type models:MediaItem}">
+            <StackPanel Width="120">
+                <Grid Height="68">
+                    <Border Background="{StaticResource CardBackground}" CornerRadius="4"/>
+                    <TextBlock Text="{Binding KindGlyph}" FontFamily="{StaticResource IconFont}" FontSize="22"
+                               Foreground="{StaticResource TextSecondary}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <!-- Nahled prekryje ikonu, jakmile se nacte -->
+                    <Border CornerRadius="4">
+                        <Border.Background>
+                            <ImageBrush ImageSource="{Binding Thumbnail}" Stretch="UniformToFill"/>
+                        </Border.Background>
+                    </Border>
+                    <Border Background="#B0000000" CornerRadius="3" Padding="4,1" Margin="4"
+                            HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                        <TextBlock Text="{Binding DurationText}" FontSize="10" Foreground="White"/>
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding DurationText}" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                </Grid>
+                <TextBlock Text="{Binding Name}" FontSize="11" Foreground="{StaticResource TextPrimary}"
+                           TextTrimming="CharacterEllipsis" Margin="2,6,2,0"/>
+            </StackPanel>
+        </DataTemplate>
+    </Window.Resources>
 
     <Grid x:Name="RootGrid">
         <Grid.RowDefinitions>
@@ -111,21 +172,55 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- Plocha pro import -->
-                            <Border Grid.Column="1" Margin="14" Background="{StaticResource CardBackground}"
-                                    CornerRadius="6" Cursor="Hand" VerticalAlignment="Top" Height="250">
-                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                        <Border Width="22" Height="22" CornerRadius="11" Background="{StaticResource Accent}">
-                                            <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" FontSize="11"
-                                                       Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                        <TextBlock Text="Importovat" FontSize="18" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                            <!-- Knihovna medii (sem lze pretahnout soubory) -->
+                            <Grid Grid.Column="1" Background="Transparent" AllowDrop="True"
+                                  DragOver="MediaArea_DragOver" Drop="MediaArea_Drop">
+
+                                <!-- Prazdna knihovna: velka plocha pro import -->
+                                <Border x:Name="EmptyImportCard" Margin="14" Background="{StaticResource CardBackground}"
+                                        CornerRadius="6" Cursor="Hand" VerticalAlignment="Top" Height="250"
+                                        MouseLeftButtonUp="EmptyImportCard_MouseLeftButtonUp">
+                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Border Width="22" Height="22" CornerRadius="11" Background="{StaticResource Accent}">
+                                                <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" FontSize="11"
+                                                           Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="Importovat" FontSize="18" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <TextBlock Text="Přetáhni sem videa, fotky a zvukové soubory." Style="{StaticResource SecondaryText}"
+                                                   HorizontalAlignment="Center" Margin="0,10,0,0"/>
                                     </StackPanel>
-                                    <TextBlock Text="Přetáhni sem videa, fotky a zvukové soubory." Style="{StaticResource SecondaryText}"
-                                               HorizontalAlignment="Center" Margin="0,10,0,0"/>
-                                </StackPanel>
-                            </Border>
+                                </Border>
+
+                                <!-- Naimportovana media -->
+                                <DockPanel x:Name="MediaListPanel" Visibility="Collapsed">
+                                    <Button DockPanel.Dock="Top" Style="{StaticResource ToolButton}" HorizontalAlignment="Left"
+                                            Margin="14,14,14,6" Click="Import_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" FontSize="11"
+                                                       Foreground="{StaticResource Accent}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Importovat"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <ListBox x:Name="MediaList" Background="Transparent" BorderThickness="0" Padding="8,0"
+                                             ItemContainerStyle="{StaticResource MediaTileContainer}"
+                                             ItemTemplate="{StaticResource MediaTile}"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             SelectionChanged="MediaList_SelectionChanged">
+                                        <ListBox.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="Odstranit z projektu" Click="RemoveMedia_Click"/>
+                                            </ContextMenu>
+                                        </ListBox.ContextMenu>
+                                        <ListBox.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel/>
+                                            </ItemsPanelTemplate>
+                                        </ListBox.ItemsPanel>
+                                    </ListBox>
+                                </DockPanel>
+                            </Grid>
                         </Grid>
                     </DockPanel>
                 </Border>
@@ -142,11 +237,15 @@
                         <!-- Ovladani prehravani -->
                         <Grid DockPanel.Dock="Bottom" Height="48" Margin="12,0">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="00:00:00:00" Foreground="{StaticResource Accent}" FontFamily="Consolas" FontSize="12"/>
-                                <TextBlock Text=" / 00:00:00:00" Foreground="{StaticResource TextSecondary}" FontFamily="Consolas" FontSize="12"/>
+                                <TextBlock x:Name="CurrentTimeText" Text="00:00:00:00" Foreground="{StaticResource Accent}"
+                                           FontFamily="Consolas" FontSize="12"/>
+                                <TextBlock Text=" / " Foreground="{StaticResource TextSecondary}" FontFamily="Consolas" FontSize="12"/>
+                                <TextBlock x:Name="TotalTimeText" Text="00:00:00:00" Foreground="{StaticResource TextSecondary}"
+                                           FontFamily="Consolas" FontSize="12"/>
                             </StackPanel>
-                            <Button Style="{StaticResource IconButton}" Content="&#xE768;" ToolTip="Přehrát (mezerník)"
-                                    HorizontalAlignment="Center" FontSize="18"/>
+                            <Button x:Name="PlayButton" Style="{StaticResource IconButton}" Content="&#xE768;"
+                                    ToolTip="Přehrát (mezerník)" HorizontalAlignment="Center" FontSize="18"
+                                    IsEnabled="False" Click="PlayButton_Click"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                 <Button Style="{StaticResource ToolButton}" Content="Poměr" Padding="8,3" FontSize="11"
                                         Background="Transparent" ToolTip="Poměr stran"/>
@@ -154,9 +253,32 @@
                             </StackPanel>
                         </Grid>
 
+                        <!-- Posuvnik pozice -->
+                        <Slider x:Name="SeekSlider" DockPanel.Dock="Bottom" Margin="12,0" IsEnabled="False"
+                                IsMoveToPointEnabled="True" Minimum="0" Maximum="1"
+                                PreviewMouseLeftButtonDown="SeekSlider_PreviewMouseLeftButtonDown"
+                                PreviewMouseLeftButtonUp="SeekSlider_PreviewMouseLeftButtonUp"
+                                ValueChanged="SeekSlider_ValueChanged"/>
+
                         <!-- Plocha nahledu 16:9 -->
-                        <Viewbox Margin="16" Stretch="Uniform">
-                            <Border Width="1600" Height="900" Background="#0A0A0B"/>
+                        <Viewbox Margin="16,16,16,8" Stretch="Uniform">
+                            <Grid Width="1600" Height="900" Background="#0A0A0B">
+                                <MediaElement x:Name="Player" LoadedBehavior="Manual" UnloadedBehavior="Stop"
+                                              ScrubbingEnabled="True" Stretch="Uniform"
+                                              MediaOpened="Player_MediaOpened" MediaEnded="Player_MediaEnded"
+                                              MediaFailed="Player_MediaFailed"/>
+                                <Image x:Name="PreviewImage" Stretch="Uniform" Visibility="Collapsed"/>
+                                <StackPanel x:Name="AudioPlaceholder" Visibility="Collapsed"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock Text="&#xE8D6;" FontFamily="{StaticResource IconFont}" FontSize="140"
+                                               Foreground="{StaticResource Accent}" HorizontalAlignment="Center"/>
+                                    <TextBlock x:Name="AudioNameText" FontSize="40" Foreground="{StaticResource TextPrimary}"
+                                               HorizontalAlignment="Center" Margin="0,30,0,0"/>
+                                </StackPanel>
+                                <TextBlock x:Name="PreviewMessage" Visibility="Collapsed" FontSize="40"
+                                           Foreground="{StaticResource TextSecondary}" TextAlignment="Center"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
                         </Viewbox>
                     </DockPanel>
                 </Border>
@@ -175,38 +297,21 @@
                         </Border>
 
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <Grid Margin="14,18,14,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="170"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Název:" Style="{StaticResource DetailLabel}"/>
-                                <TextBlock Grid.Row="0" Grid.Column="1" Text="Nový projekt" Style="{StaticResource DetailValue}"/>
-
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Umístění:" Style="{StaticResource DetailLabel}"/>
-                                <TextBlock Grid.Row="1" Grid.Column="1" Text="Neuloženo" Style="{StaticResource DetailValue}"/>
-
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Poměr stran:" Style="{StaticResource DetailLabel}"/>
-                                <TextBlock Grid.Row="2" Grid.Column="1" Text="16:9" Style="{StaticResource DetailValue}"/>
-
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Rozlišení:" Style="{StaticResource DetailLabel}"/>
-                                <TextBlock Grid.Row="3" Grid.Column="1" Text="1920 × 1080" Style="{StaticResource DetailValue}"/>
-
-                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Snímková frekvence:" Style="{StaticResource DetailLabel}"/>
-                                <TextBlock Grid.Row="4" Grid.Column="1" Text="30 fps" Style="{StaticResource DetailValue}"/>
-
-                                <TextBlock Grid.Row="5" Grid.Column="0" Text="Importovaná média:" Style="{StaticResource DetailLabel}"/>
-                                <TextBlock Grid.Row="5" Grid.Column="1" Text="Zachovat původní umístění" Style="{StaticResource DetailValue}"/>
-                            </Grid>
+                            <!-- Radky se plni z kodu: podrobnosti projektu, nebo vybraneho media -->
+                            <ItemsControl x:Name="DetailsList" Margin="14,18,14,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="170"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Key}" Style="{StaticResource DetailLabel}"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Value}" Style="{StaticResource DetailValue}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </ScrollViewer>
                     </DockPanel>
                 </Border>
