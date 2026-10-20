@@ -60,6 +60,20 @@
                             <ImageBrush ImageSource="{Binding Thumbnail}" Stretch="UniformToFill"/>
                         </Border.Background>
                     </Border>
+                    <!-- Hvezdicka u oblibenych -->
+                    <TextBlock Text="&#xE735;" FontFamily="{StaticResource IconFont}" FontSize="12" Foreground="#FFC83D"
+                               Margin="5" HorizontalAlignment="Left" VerticalAlignment="Top">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                     <!-- Tlacitko + pro pridani na casovou osu (ukaze se pri najeti mysi) -->
                     <Button Width="20" Height="20" Margin="4" Cursor="Hand" ToolTip="Přidat na časovou osu"
                             HorizontalAlignment="Right" VerticalAlignment="Top" Click="AddTileToTimeline_Click">
@@ -190,7 +204,8 @@
                             <StackPanel Orientation="Horizontal">
                                 <RadioButton x:Name="MediaTab" Style="{StaticResource CategoryTab}" Tag="&#xE714;" Content="Média"
                                              IsChecked="True" Checked="CategoryTab_Checked"/>
-                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE8D6;" Content="Zvuk" Checked="CategoryTab_Checked"/>
+                                <RadioButton x:Name="AudioTab" Style="{StaticResource CategoryTab}" Tag="&#xE8D6;" Content="Zvuk"
+                                             Checked="CategoryTab_Checked"/>
                                 <RadioButton x:Name="TextTab" Style="{StaticResource CategoryTab}" Tag="&#xE8D2;" Content="Text"
                                              Checked="CategoryTab_Checked"/>
                                 <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE76E;" Content="Nálepky" Checked="CategoryTab_Checked"/>
@@ -213,10 +228,22 @@
                             <!-- Podnabidka -->
                             <Border Grid.Column="0" Background="{StaticResource SubPanelBackground}" Padding="8,10">
                                 <StackPanel>
-                                    <RadioButton Style="{StaticResource NavItem}" Content="Importovat" IsChecked="True"/>
-                                    <RadioButton Style="{StaticResource NavItem}" Content="Média"/>
-                                    <RadioButton Style="{StaticResource NavItem}" Content="Oblíbené"/>
-                                    <RadioButton Style="{StaticResource NavItem}" Content="Nedávné"/>
+                                    <RadioButton x:Name="FilterAll" Style="{StaticResource NavItem}" Content="Vše" Tag="All"
+                                                 IsChecked="True" Checked="LibraryFilter_Checked"/>
+                                    <RadioButton Style="{StaticResource NavItem}" Content="Videa" Tag="Video" Checked="LibraryFilter_Checked"/>
+                                    <RadioButton Style="{StaticResource NavItem}" Content="Obrázky" Tag="Image" Checked="LibraryFilter_Checked"/>
+                                    <RadioButton x:Name="FilterAudio" Style="{StaticResource NavItem}" Content="Zvuk" Tag="Audio"
+                                                 Checked="LibraryFilter_Checked"/>
+                                    <RadioButton Style="{StaticResource NavItem}" Tag="Favorite" Checked="LibraryFilter_Checked">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE735;" FontFamily="{StaticResource IconFont}" FontSize="11"
+                                                       Foreground="#FFC83D" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Oblíbené"/>
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <TextBlock x:Name="LibraryFilterEmpty" Visibility="Collapsed" TextWrapping="Wrap"
+                                               Style="{StaticResource SecondaryText}" FontSize="11" Margin="10,8,0,0"
+                                               Text="V této skupině zatím nic není."/>
                                 </StackPanel>
                             </Border>
 
@@ -261,6 +288,8 @@
                                         <ListBox.ContextMenu>
                                             <ContextMenu>
                                                 <MenuItem Header="Přidat na časovou osu" Click="AddToTimeline_Click"/>
+                                                <MenuItem x:Name="FavoriteMenuItem" Header="Přidat do oblíbených" Click="ToggleFavorite_Click"/>
+                                                <Separator/>
                                                 <MenuItem Header="Odstranit z projektu" Click="RemoveMedia_Click"/>
                                             </ContextMenu>
                                         </ListBox.ContextMenu>
@@ -359,9 +388,20 @@
                                     ToolTip="Přehrát (mezerník)" HorizontalAlignment="Center" FontSize="18"
                                     IsEnabled="False" Click="PlayButton_Click"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                <Button Style="{StaticResource ToolButton}" Content="Poměr" Padding="8,3" FontSize="11"
-                                        Background="Transparent" ToolTip="Poměr stran"/>
-                                <Button Style="{StaticResource IconButton}" Content="&#xE740;" ToolTip="Celá obrazovka"/>
+                                <Button x:Name="AspectButton" Style="{StaticResource ToolButton}" Content="16:9" Padding="8,3" FontSize="11"
+                                        Background="Transparent" ToolTip="Poměr stran videa" Click="AspectButton_Click">
+                                    <Button.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="16:9  (YouTube, na šířku)" Tag="16:9" Click="AspectMenu_Click"/>
+                                            <MenuItem Header="9:16  (TikTok, Reels, Shorts)" Tag="9:16" Click="AspectMenu_Click"/>
+                                            <MenuItem Header="1:1  (čtverec, Instagram)" Tag="1:1" Click="AspectMenu_Click"/>
+                                            <MenuItem Header="4:3" Tag="4:3" Click="AspectMenu_Click"/>
+                                            <MenuItem Header="3:4" Tag="3:4" Click="AspectMenu_Click"/>
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
+                                </Button>
+                                <Button Style="{StaticResource IconButton}" Content="&#xE740;" ToolTip="Celá obrazovka (F)"
+                                        Click="Fullscreen_Click"/>
                             </StackPanel>
                         </Grid>
 
@@ -374,7 +414,8 @@
 
                         <!-- Plocha nahledu 16:9 -->
                         <Viewbox Margin="16,16,16,8" Stretch="Uniform">
-                            <Grid Width="1600" Height="900" Background="#0A0A0B">
+                            <Grid x:Name="PreviewCanvas" Width="1600" Height="900" Background="#0A0A0B"
+                                  MouseLeftButtonDown="PreviewCanvas_MouseLeftButtonDown">
                                 <MediaElement x:Name="Player" LoadedBehavior="Manual" UnloadedBehavior="Stop"
                                               ScrubbingEnabled="True" Stretch="Uniform"
                                               MediaOpened="Player_MediaOpened" MediaEnded="Player_MediaEnded"

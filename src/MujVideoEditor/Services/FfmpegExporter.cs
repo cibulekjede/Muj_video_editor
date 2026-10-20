@@ -201,11 +201,11 @@ public partial class FfmpegExporter(string ffmpegPath)
         return File.Exists(path) ? path : Path.Combine(fontsDir, "arial.ttf");
     }
 
-    /// <summary>Filtr drawtext pro jeden text (velikosti jsou definovane pro vysku 1080 px).</summary>
+    /// <summary>Filtr drawtext pro jeden text (velikosti jsou definovane pro kratsi stranu 1080 px).</summary>
     private static string DrawText(TextOverlay overlay, string textFile, TimeSpan start, TimeSpan end,
         ExportSettings settings, bool modern)
     {
-        double scale = settings.Height / 1080.0;
+        double scale = Math.Min(settings.Width, settings.Height) / 1080.0;
         string color = overlay.Color.TrimStart('#');
         var parts = new List<string>
         {

@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 namespace MujVideoEditor.Models;
 
 /// <summary>
-/// Vzhled textu ve videu. Velikost pisma je v pixelech pro video vysoke 1080 px,
+/// Vzhled textu ve videu. Velikost pisma je v pixelech pro video, jehoz kratsi strana ma 1080 px,
 /// pozice X/Y je stred textu v pomeru k sirce/vysce obrazu (0 az 1).
 /// </summary>
 public class TextOverlay : INotifyPropertyChanged

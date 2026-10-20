@@ -14,10 +14,11 @@ namespace MujVideoEditor;
 /// </summary>
 public partial class MainWindow
 {
-    // Nahled ma vnitrni rozmer 1600x900, velikost pisma je definovana pro video vysoke 1080 px
-    private const double PreviewWidth = 1600;
+    // Nahled ma vnitrni vysku 900 (sirka podle pomeru stran). Velikost pisma je definovana
+    // pro kratsi stranu videa 1080 px, aby se text vesel i do videa na vysku.
+    private double PreviewWidth => PreviewCanvas.Width;
     private const double PreviewHeight = 900;
-    private const double PreviewScale = PreviewHeight / 1080;
+    private double PreviewScale => Math.Min(PreviewWidth, PreviewHeight) / 1080;
 
     private List<TimelineClip> _shownTexts = [];
     private bool _textLayerDirty = true;
@@ -36,8 +37,14 @@ public partial class MainWindow
         if (MediaCategoryPanel is null)
             return; // jeste se nacita okno
 
-        bool media = sender == MediaTab;
+        bool media = sender == MediaTab || sender == AudioTab;
         bool text = sender == TextTab || sender == SubtitlesTab;
+
+        // Zalozka Zvuk = knihovna medii jen se zvukem
+        if (sender == AudioTab)
+            FilterAudio.IsChecked = true;
+        else if (sender == MediaTab && FilterAudio.IsChecked == true)
+            FilterAll.IsChecked = true;
         MediaCategoryPanel.Visibility = media ? Visibility.Visible : Visibility.Collapsed;
         TextCategoryPanel.Visibility = text ? Visibility.Visible : Visibility.Collapsed;
         ComingSoonPanel.Visibility = media || text ? Visibility.Collapsed : Visibility.Visible;

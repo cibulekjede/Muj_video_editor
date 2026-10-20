@@ -33,6 +33,13 @@ public class MediaItem : INotifyPropertyChanged
 
     private ImageSource? _thumbnail;
     private TimeSpan? _duration;
+    private bool _isFavorite;
+
+    public bool IsFavorite
+    {
+        get => _isFavorite;
+        set { _isFavorite = value; OnPropertyChanged(); }
+    }
 
     public MediaItem(string filePath, MediaKind kind)
     {

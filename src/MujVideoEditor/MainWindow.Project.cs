@@ -56,7 +56,7 @@ public partial class MainWindow
         if (!ConfirmDiscardChanges())
             return;
 
-        LoadIntoEditor(null, [], new TimelineState([], []));
+        LoadIntoEditor(null, [], new TimelineState([], []), AspectRatio.Landscape);
     }
 
     private void OpenProject(string? path = null)
@@ -89,7 +89,7 @@ public partial class MainWindow
             return;
         }
 
-        LoadIntoEditor(path, project.Media, project.Timeline);
+        LoadIntoEditor(path, project.Media, project.Timeline, project.Aspect);
 
         if (project.MissingFiles.Count > 0)
         {
@@ -122,7 +122,7 @@ public partial class MainWindow
     {
         try
         {
-            ProjectSerializer.Save(path, _mediaItems, TimelineEditor.Model.Snapshot());
+            ProjectSerializer.Save(path, _mediaItems, TimelineEditor.Model.Snapshot(), _aspect);
         }
         catch (Exception ex)
         {
@@ -156,7 +156,7 @@ public partial class MainWindow
         };
     }
 
-    private void LoadIntoEditor(string? projectPath, List<MediaItem> media, TimelineState timeline)
+    private void LoadIntoEditor(string? projectPath, List<MediaItem> media, TimelineState timeline, AspectRatio aspect)
     {
         _isLoadingProject = true;
         try
@@ -168,6 +168,7 @@ public partial class MainWindow
             foreach (var item in media)
                 _mediaItems.Add(item);
 
+            SetAspect(aspect);
             TimelineEditor.Load(timeline);
             _projectPath = projectPath;
             _isDirty = false;

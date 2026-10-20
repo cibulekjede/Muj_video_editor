@@ -83,6 +83,7 @@ public partial class MainWindow : Window
         _playbackTimer.Tick += (_, _) => OnPlaybackTick();
         _playbackTimer.Start();
 
+        InitializeViewFeatures();
         ShowProjectDetails();
         StateChanged += (_, _) => UpdateMaximizeState();
 
@@ -135,7 +136,7 @@ public partial class MainWindow : Window
         if (ffmpeg is null)
             return;
 
-        new ExportWindow(timeline.Snapshot(), timeline.Duration, ffmpeg, ProjectName) { Owner = this }.ShowDialog();
+        new ExportWindow(timeline.Snapshot(), timeline.Duration, ffmpeg, ProjectName, _aspect) { Owner = this }.ShowDialog();
     }
 
     private static string? _chosenFfmpegPath;
@@ -191,6 +192,9 @@ public partial class MainWindow : Window
                 break;
             case Key.E when ctrl:
                 Export_Click(this, e);
+                break;
+            case Key.F when !ctrl:
+                ShowFullscreen();
                 break;
             case Key.Space:
                 TogglePlayback();
@@ -388,6 +392,7 @@ public partial class MainWindow : Window
         bool hasMedia = _mediaItems.Count > 0;
         EmptyImportCard.Visibility = hasMedia ? Visibility.Collapsed : Visibility.Visible;
         MediaListPanel.Visibility = hasMedia ? Visibility.Visible : Visibility.Collapsed;
+        ApplyLibraryFilter();
     }
 
     private void MediaList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -855,8 +860,8 @@ public partial class MainWindow : Window
         {
             ["Název:"] = ProjectName,
             ["Umístění:"] = _projectPath is null ? "Neuloženo" : Path.GetDirectoryName(_projectPath) ?? "",
-            ["Poměr stran:"] = "16:9",
-            ["Rozlišení:"] = "1920 × 1080",
+            ["Poměr stran:"] = _aspect.Name,
+            ["Rozlišení:"] = $"{_aspect.OutputSize(1080).Width} × {_aspect.OutputSize(1080).Height}",
             ["Snímková frekvence:"] = $"{FramesPerSecond} fps"
         };
 

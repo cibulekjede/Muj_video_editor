@@ -14,22 +14,22 @@ namespace MujVideoEditor;
 /// </summary>
 public partial class ExportWindow : Window
 {
-    private const double AspectRatio = 16.0 / 9.0;
-
     private readonly TimelineState _timeline;
+    private readonly AspectRatio _aspect;
     private readonly FfmpegExporter _exporter;
     private CancellationTokenSource? _cancellation;
     private string? _outputPath;
 
-    public ExportWindow(TimelineState timeline, TimeSpan duration, string ffmpegPath, string defaultName)
+    public ExportWindow(TimelineState timeline, TimeSpan duration, string ffmpegPath, string defaultName, AspectRatio aspect)
     {
         InitializeComponent();
         _timeline = timeline;
+        _aspect = aspect;
         _exporter = new FfmpegExporter(ffmpegPath);
 
         NameBox.Text = defaultName.Replace(' ', '_');
         FolderBox.Text = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
-        SummaryText.Text = $"Délka videa: {MediaItem.FormatDuration(duration)} · formát MP4 (H.264 + AAC)";
+        SummaryText.Text = $"Délka videa: {MediaItem.FormatDuration(duration)} · poměr stran {aspect.Name} · formát MP4 (H.264 + AAC)";
     }
 
     private bool IsExporting => _cancellation is not null;
@@ -81,8 +81,7 @@ public partial class ExportWindow : Window
                 return;
         }
 
-        int height = SelectedTag(ResolutionChoices);
-        int width = (int)Math.Round(height * AspectRatio / 2) * 2; // sirka musi byt suda
+        var (width, height) = _aspect.OutputSize(SelectedTag(ResolutionChoices));
         var settings = new ExportSettings(path, width, height, SelectedTag(FpsChoices), SelectedTag(QualityChoices));
 
         _outputPath = path;

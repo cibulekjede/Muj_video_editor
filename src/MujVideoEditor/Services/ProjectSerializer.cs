@@ -19,7 +19,7 @@ public static class ProjectSerializer
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    private record MediaData(string Path, string? RelativePath);
+    private record MediaData(string Path, string? RelativePath, bool Favorite = false);
 
     private record ClipData(int Media, double In, double Out);
 
@@ -27,11 +27,11 @@ public static class ProjectSerializer
         bool Bold, bool Shadow, bool Background, double X, double Y);
 
     private record ProjectData(int Version, List<MediaData> Media, List<ClipData> VideoClips, List<ClipData> AudioClips,
-        List<TextData>? Texts = null);
+        List<TextData>? Texts = null, string? Aspect = null);
 
-    public record LoadedProject(List<MediaItem> Media, TimelineState Timeline, List<string> MissingFiles);
+    public record LoadedProject(List<MediaItem> Media, TimelineState Timeline, List<string> MissingFiles, AspectRatio Aspect);
 
-    public static void Save(string projectPath, IEnumerable<MediaItem> library, TimelineState timeline)
+    public static void Save(string projectPath, IEnumerable<MediaItem> library, TimelineState timeline, AspectRatio aspect)
     {
         string projectDir = Path.GetDirectoryName(Path.GetFullPath(projectPath))!;
         var media = library.ToList();
@@ -49,12 +49,13 @@ public static class ProjectSerializer
         var data = new ProjectData(
             CurrentVersion,
             // Relativni cesta pomuze, kdyz se slozka s projektem i videi presune jinam
-            media.Select(m => new MediaData(m.FilePath, Path.GetRelativePath(projectDir, m.FilePath))).ToList(),
+            media.Select(m => new MediaData(m.FilePath, Path.GetRelativePath(projectDir, m.FilePath), m.IsFavorite)).ToList(),
             timeline.VideoClips.Select(ToData).ToList(),
             timeline.AudioClips.Select(ToData).ToList(),
             timeline.Texts.Where(c => c.Overlay is not null).Select(c => new TextData(
                 c.Start.TotalSeconds, c.Duration.TotalSeconds, c.Overlay!.Text, c.Overlay.FontFamily, c.Overlay.FontSize,
-                c.Overlay.Color, c.Overlay.Bold, c.Overlay.HasShadow, c.Overlay.HasBackground, c.Overlay.X, c.Overlay.Y)).ToList());
+                c.Overlay.Color, c.Overlay.Bold, c.Overlay.HasShadow, c.Overlay.HasBackground, c.Overlay.X, c.Overlay.Y)).ToList(),
+            aspect.Name);
 
         // Nejdriv do docasneho souboru, at pri chybe neprijdeme o puvodni projekt
         string tempPath = projectPath + ".tmp";
@@ -79,7 +80,7 @@ public static class ProjectSerializer
             string? path = ResolvePath(entry, projectDir);
             if (path is not null && MediaItem.DetectKind(path) is { } kind)
             {
-                media.Add(new MediaItem(path, kind));
+                media.Add(new MediaItem(path, kind) { IsFavorite = entry.Favorite });
             }
             else
             {
@@ -113,7 +114,8 @@ public static class ProjectSerializer
         return new LoadedProject(
             media.OfType<MediaItem>().ToList(),
             new TimelineState(ToClips(data.VideoClips), ToClips(data.AudioClips), texts),
-            missing);
+            missing,
+            AspectRatio.Parse(data.Aspect));
     }
 
     private static string? ResolvePath(MediaData entry, string projectDir)
