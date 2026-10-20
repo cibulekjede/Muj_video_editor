@@ -21,7 +21,8 @@ public static class ProjectSerializer
 
     private record MediaData(string Path, string? RelativePath, bool Favorite = false);
 
-    private record ClipData(int Media, double In, double Out);
+    private record ClipData(int Media, double In, double Out,
+        double Speed = 1, double Volume = 1, double FadeIn = 0, double FadeOut = 0);
 
     private record TextData(double Start, double Duration, string Text, string Font, double Size, string Color,
         bool Bold, bool Shadow, bool Background, double X, double Y);
@@ -44,7 +45,8 @@ public static class ProjectSerializer
         }
 
         ClipData ToData(TimelineClip clip) =>
-            new(media.IndexOf(clip.Media), clip.SourceIn.TotalSeconds, clip.SourceOut.TotalSeconds);
+            new(media.IndexOf(clip.Media), clip.SourceIn.TotalSeconds, clip.SourceOut.TotalSeconds,
+                clip.Speed, clip.Volume, clip.FadeIn, clip.FadeOut);
 
         var data = new ProjectData(
             CurrentVersion,
@@ -92,7 +94,13 @@ public static class ProjectSerializer
         List<TimelineClip> ToClips(List<ClipData>? clips) =>
             (clips ?? [])
             .Where(c => c.Media >= 0 && c.Media < media.Count && media[c.Media] is not null && c.Out > c.In)
-            .Select(c => new TimelineClip(media[c.Media]!, TimeSpan.FromSeconds(c.In), TimeSpan.FromSeconds(c.Out)))
+            .Select(c => new TimelineClip(media[c.Media]!, TimeSpan.FromSeconds(c.In), TimeSpan.FromSeconds(c.Out))
+            {
+                Speed = c.Speed > 0 ? c.Speed : 1,
+                Volume = c.Volume,
+                FadeIn = c.FadeIn,
+                FadeOut = c.FadeOut
+            })
             .ToList();
 
         var texts = (data.Texts ?? [])

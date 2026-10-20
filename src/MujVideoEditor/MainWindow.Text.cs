@@ -39,6 +39,8 @@ public partial class MainWindow
 
         bool media = sender == MediaTab || sender == AudioTab;
         bool text = sender == TextTab || sender == SubtitlesTab;
+        bool transitions = sender == TransitionsTab;
+        TransitionsCategoryPanel.Visibility = transitions ? Visibility.Visible : Visibility.Collapsed;
 
         // Zalozka Zvuk = knihovna medii jen se zvukem
         if (sender == AudioTab)
@@ -47,7 +49,7 @@ public partial class MainWindow
             FilterAll.IsChecked = true;
         MediaCategoryPanel.Visibility = media ? Visibility.Visible : Visibility.Collapsed;
         TextCategoryPanel.Visibility = text ? Visibility.Visible : Visibility.Collapsed;
-        ComingSoonPanel.Visibility = media || text ? Visibility.Collapsed : Visibility.Visible;
+        ComingSoonPanel.Visibility = media || text || transitions ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void TextPreset_Click(object sender, RoutedEventArgs e)

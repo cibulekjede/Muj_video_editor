@@ -128,6 +128,11 @@
                             ToolTip="Smazat vybraný klip (Delete)" Click="DeleteButton_Click"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <CheckBox x:Name="SnapCheck" Style="{StaticResource ChipCheck}" IsChecked="True" Margin="0,0,12,0"
+                              FontSize="12" VerticalAlignment="Center"
+                              ToolTip="Přichytávání okrajů klipů k ukazateli a k ostatním klipům">
+                        <TextBlock Text="Přichytávat"/>
+                    </CheckBox>
                     <Button Style="{StaticResource IconButton}" Content="&#xE71F;" ToolTip="Oddálit (Ctrl+kolečko)"
                             Click="ZoomOut_Click"/>
                     <Slider x:Name="ZoomSlider" Width="140" Minimum="0" Maximum="90" Value="40"
@@ -213,6 +218,9 @@
 
                     <!-- Ukazatel pozice prehravani -->
                     <Canvas Grid.RowSpan="8" IsHitTestVisible="False">
+                        <!-- Zluta cara pri prichyceni -->
+                        <Rectangle x:Name="SnapLine" Width="1" Fill="#FFD84A" Visibility="Collapsed"
+                                   Height="{Binding ActualHeight, ElementName=ContentGrid}"/>
                         <Grid x:Name="PlayheadMarker" Width="11" Height="{Binding ActualHeight, ElementName=ContentGrid}">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>

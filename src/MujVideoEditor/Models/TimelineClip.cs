@@ -14,8 +14,15 @@ public class TimelineClip : INotifyPropertyChanged
     public static readonly TimeSpan DefaultTextDuration = TimeSpan.FromSeconds(3);
     public static readonly TimeSpan MaxImageDuration = TimeSpan.FromHours(1);
 
+    public const double MinSpeed = 0.25;
+    public const double MaxSpeed = 4;
+
     private TimeSpan _sourceIn;
     private TimeSpan _sourceOut;
+    private double _speed = 1;
+    private double _volume = 1;
+    private double _fadeIn;
+    private double _fadeOut;
     private double _width;
     private double _left;
     private bool _isSelected;
@@ -58,7 +65,57 @@ public class TimelineClip : INotifyPropertyChanged
         set { _sourceOut = value; OnDurationChanged(); }
     }
 
-    public TimeSpan Duration => SourceOut - SourceIn;
+    /// <summary>Rychlost prehravani (1 = normalni, 2 = dvakrat rychleji). Zrychleny klip je na ose kratsi.</summary>
+    public double Speed
+    {
+        get => _speed;
+        set { _speed = Math.Clamp(value, MinSpeed, MaxSpeed); OnDurationChanged(); OnPropertyChanged(); }
+    }
+
+    /// <summary>Hlasitost (1 = 100 %, 0 = ztlumeno, 2 = 200 %).</summary>
+    public double Volume
+    {
+        get => _volume;
+        set { _volume = Math.Clamp(value, 0, 2); OnPropertyChanged(); }
+    }
+
+    /// <summary>Roztmivani na zacatku klipu (z cerne / z ticha) v sekundach, 0 = bez.</summary>
+    public double FadeIn
+    {
+        get => _fadeIn;
+        set { _fadeIn = Math.Max(0, value); OnPropertyChanged(); }
+    }
+
+    /// <summary>Zatmivani na konci klipu (do cerne / do ticha) v sekundach, 0 = bez.</summary>
+    public double FadeOut
+    {
+        get => _fadeOut;
+        set { _fadeOut = Math.Max(0, value); OnPropertyChanged(); }
+    }
+
+    public bool HasAudio => Media.Kind is MediaKind.Video or MediaKind.Audio;
+    public bool CanChangeSpeed => Media.Kind is MediaKind.Video or MediaKind.Audio;
+
+    /// <summary>Jak moc je klip v danem miste videt/slyset kvuli prolinani (0 az 1).</summary>
+    public double FadeFactor(TimeSpan offset)
+    {
+        double factor = 1;
+        double fadeIn = Math.Min(FadeIn, Duration.TotalSeconds / 2);
+        double fadeOut = Math.Min(FadeOut, Duration.TotalSeconds / 2);
+        if (fadeIn > 0)
+            factor = Math.Min(factor, offset.TotalSeconds / fadeIn);
+        if (fadeOut > 0)
+            factor = Math.Min(factor, (Duration - offset).TotalSeconds / fadeOut);
+        return Math.Clamp(factor, 0, 1);
+    }
+
+    /// <summary>Delka klipu na casove ose.</summary>
+    public TimeSpan Duration => ToTimeline(SourceOut - SourceIn);
+
+    /// <summary>Prevede delku na ose na delku ve zdrojovem souboru (podle rychlosti).</summary>
+    public TimeSpan ToSource(TimeSpan timelineSpan) => TimeSpan.FromTicks((long)(timelineSpan.Ticks * Speed));
+
+    public TimeSpan ToTimeline(TimeSpan sourceSpan) => TimeSpan.FromTicks((long)(sourceSpan.Ticks / Speed));
     public string DurationText => Duration.ToString(@"mm\:ss\.f");
 
     /// <summary>Nejdal, kam lze klip prodlouzit (obrazek a text lze natahnout libovolne).</summary>
@@ -90,7 +147,15 @@ public class TimelineClip : INotifyPropertyChanged
         set { _isSelected = value; OnPropertyChanged(); }
     }
 
-    public TimelineClip Clone() => new(Media, SourceIn, SourceOut, Overlay?.Clone()) { Start = Start };
+    public TimelineClip Clone() =>
+        new(Media, SourceIn, SourceOut, Overlay?.Clone())
+        {
+            Start = Start,
+            Speed = Speed,
+            Volume = Volume,
+            FadeIn = FadeIn,
+            FadeOut = FadeOut
+        };
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

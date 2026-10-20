@@ -107,9 +107,16 @@ public class Timeline
     /// <summary>Rozdeli klip v case <paramref name="time"/> a vrati jeho druhou cast.</summary>
     public TimelineClip Split(TimelineClip clip, TimeSpan time)
     {
-        var cutPoint = clip.SourceIn + (time - clip.Start);
-        var second = new TimelineClip(clip.Media, cutPoint, clip.SourceOut, clip.Overlay?.Clone()) { Start = time };
+        var cutPoint = clip.SourceIn + clip.ToSource(time - clip.Start);
+        var second = new TimelineClip(clip.Media, cutPoint, clip.SourceOut, clip.Overlay?.Clone())
+        {
+            Start = time,
+            Speed = clip.Speed,
+            Volume = clip.Volume,
+            FadeOut = clip.FadeOut // zatmivani zustane na konci, roztmivani na zacatku prvni casti
+        };
         clip.SourceOut = cutPoint;
+        clip.FadeOut = 0;
 
         var track = TrackOf(clip);
         track.Insert(track.IndexOf(clip) + 1, second);

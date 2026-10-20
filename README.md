@@ -11,7 +11,12 @@ Vlastní open source video editor ve stylu CapCut, napsaný v C# (.NET 10, WPF).
 - [x] Zkracování, dělení (Ctrl+B), přesouvání a mazání klipů, Zpět/Znovu (Ctrl+Z/Ctrl+Y)
 - [x] Ukládání a otevírání projektu (.mvproj), upozornění na neuložené změny
 - [x] Text a titulky (předlohy, písmo, velikost, barva, stín, pozadí, přetažení v náhledu, export)
-- [ ] Přechody a efekty
+- [x] Poměr stran 16:9, 9:16 (TikTok/Reels), 1:1, 4:3, 3:4
+- [x] Hlasitost a rychlost klipů (0,25× až 4×)
+- [x] Přechody: prolnutí přes černou (roztmívání a zatmívání)
+- [x] Plynulé přehrávání bez probliknutí na střihu, přichytávání na časové ose
+- [x] Celá obrazovka (F), filtry knihovny a oblíbená média
+- [ ] Filtry, efekty a nálepky
 - [x] Export do MP4 (pomocí FFmpeg): 720p až 4K, 24–60 fps, volba kvality
 
 ## Požadavky

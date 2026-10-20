@@ -55,7 +55,9 @@ public partial class MainWindow : Window
     // Prehravani casove osy ridi vlastni hodiny; videa se k nim jen dorovnavaji
     private readonly Stopwatch _timelineClock = new();
     private TimeSpan _timelineClockStart;
-    private ElementState _videoState = new();
+    private readonly ElementState[] _videoStates = [new(), new()];
+    private MediaElement[] _videoElements = [];
+    private int _activeVideo;
     private ElementState _audioState = new();
 
     // Tazeni media z knihovny na casovou osu
@@ -83,6 +85,7 @@ public partial class MainWindow : Window
         _playbackTimer.Tick += (_, _) => OnPlaybackTick();
         _playbackTimer.Start();
 
+        _videoElements = [Player, PlayerB];
         InitializeViewFeatures();
         ShowProjectDetails();
         StateChanged += (_, _) => UpdateMaximizeState();
@@ -406,12 +409,21 @@ public partial class MainWindow : Window
     private void ClearPreview()
     {
         _timelineClock.Reset();
-        Player.Stop();
-        Player.Source = null;
-        Player.Visibility = Visibility.Visible;
+        foreach (var element in _videoElements)
+        {
+            element.Stop();
+            element.Source = null;
+        }
+        for (int i = 0; i < _videoStates.Length; i++)
+            _videoStates[i] = new ElementState();
+        _activeVideo = 0;
+        ShowVideoElement(0); // v knihovne hraje vzdy prvni prehravac
+        Player.SpeedRatio = 1;
+        Player.Volume = 1; // vychozi hlasitost MediaElementu je jen 50 %
+        PreviewImage.Opacity = 1;
+
         AudioPlayer.Stop();
         AudioPlayer.Source = null;
-        _videoState = new ElementState();
         _audioState = new ElementState();
 
         PreviewImage.Source = null;
@@ -430,6 +442,7 @@ public partial class MainWindow : Window
         TotalTimeText.Text = FormatTimecode(TimeSpan.Zero);
 
         ShowTextEditor(null);
+        ShowClipEditor(null);
         TextLayer.Children.Clear();
         _shownTexts = [];
         ShowProjectDetails();
@@ -476,9 +489,15 @@ public partial class MainWindow : Window
     private void Player_MediaOpened(object sender, RoutedEventArgs e)
     {
         if (_mode == PreviewMode.Timeline)
-            OnTimelineElementOpened(Player, _videoState);
+            OnTimelineElementOpened(Player, _videoStates[0]);
         else if (_mode == PreviewMode.Library)
             OnLibraryMediaOpened();
+    }
+
+    private void PlayerB_MediaOpened(object sender, RoutedEventArgs e)
+    {
+        if (_mode == PreviewMode.Timeline)
+            OnTimelineElementOpened(PlayerB, _videoStates[1]);
     }
 
     private void AudioPlayer_MediaOpened(object sender, RoutedEventArgs e) =>
@@ -496,8 +515,12 @@ public partial class MainWindow : Window
 
     private void Player_MediaFailed(object sender, ExceptionRoutedEventArgs e)
     {
-        Player.Source = null;
-        _videoState = new ElementState();
+        // Stav (nazev souboru) nechame, aby se vadny soubor nezkousel otevirat porad dokola
+        var element = (MediaElement)sender;
+        element.Source = null;
+        if (element != _videoElements[_activeVideo])
+            return; // selhalo jen prednacteni dalsiho klipu; ukaze se, az na nej dojde rada
+
         AudioPlaceholder.Visibility = Visibility.Collapsed;
         ShowPreviewMessage("Tento soubor nejde přehrát.\nWindows pro něj možná nemá kodek.");
 
@@ -669,6 +692,7 @@ public partial class MainWindow : Window
             return;
 
         ShowTextEditor(clip);
+        ShowClipEditor(clip);
         if (clip is null)
             ShowProjectDetails();
         else if (!clip.IsText)
@@ -738,22 +762,52 @@ public partial class MainWindow : Window
 
         // Stopa Video: video, obrazek, nebo nic (cerna)
         var videoClip = videoHit?.Clip;
-        if (videoClip?.Media.Kind == MediaKind.Image)
+        int active = _activeVideo;
+        int spare = 1 - active;
+
+        if (videoClip?.Media.Kind == MediaKind.Video)
         {
-            PreviewImage.Source = LoadImage(videoClip.Media.FilePath);
-            PreviewImage.Visibility = Visibility.Visible;
-            Player.Visibility = Visibility.Hidden;
-            SyncElement(Player, _videoState, null, TimeSpan.Zero);
+            // Dalsi klip uz je nacteny v druhem prehravaci -> jen je prohodime (zadne probliknuti cerne)
+            if (_videoStates[active].FilePath != videoClip.Media.FilePath &&
+                _videoStates[spare].FilePath == videoClip.Media.FilePath && _videoStates[spare].IsOpened)
+            {
+                (active, spare) = (spare, active);
+                _activeVideo = active;
+            }
+
+            PreviewImage.Visibility = Visibility.Collapsed;
+            SyncElement(_videoElements[active], _videoStates[active], videoClip, videoHit!.Value.Offset, _isPlaying);
+            ShowVideoElement(active);
+
+            // Prolinani pres cernou a hlasitost klipu (MediaElement umi nejvys 100 %)
+            double fade = videoClip.FadeFactor(videoHit.Value.Offset);
+            _videoElements[active].Opacity = fade;
+            _videoElements[active].Volume = Math.Min(1, videoClip.Volume) * fade;
         }
         else
         {
-            PreviewImage.Visibility = Visibility.Collapsed;
-            Player.Visibility = videoClip is null ? Visibility.Hidden : Visibility.Visible;
-            SyncElement(Player, _videoState, videoClip, videoHit?.Offset ?? TimeSpan.Zero);
+            if (videoClip?.Media.Kind == MediaKind.Image)
+            {
+                PreviewImage.Source = LoadImage(videoClip.Media.FilePath);
+                PreviewImage.Visibility = Visibility.Visible;
+                PreviewImage.Opacity = videoClip.FadeFactor(videoHit!.Value.Offset);
+            }
+            else
+            {
+                PreviewImage.Visibility = Visibility.Collapsed;
+            }
+            SyncElement(_videoElements[active], _videoStates[active], null, TimeSpan.Zero, false);
+            ShowVideoElement(null);
         }
 
+        // Druhy prehravac si dopredu nacte nasledujici video, pozastavene na jeho zacatku
+        var next = videoClip is null ? null : NextVideoClip(videoClip);
+        SyncElement(_videoElements[spare], _videoStates[spare], next, TimeSpan.Zero, false);
+
         // Stopa Zvuk
-        SyncElement(AudioPlayer, _audioState, audioHit?.Clip, audioHit?.Offset ?? TimeSpan.Zero);
+        SyncElement(AudioPlayer, _audioState, audioHit?.Clip, audioHit?.Offset ?? TimeSpan.Zero, _isPlaying);
+        if (audioHit is { } music)
+            AudioPlayer.Volume = Math.Min(1, music.Clip.Volume) * music.Clip.FadeFactor(music.Offset);
 
         RenderTexts(position);
 
@@ -762,8 +816,26 @@ public partial class MainWindow : Window
         CurrentTimeText.Text = FormatTimecode(position);
     }
 
+    private TimelineClip? NextVideoClip(TimelineClip clip)
+    {
+        var track = TimelineEditor.Model.VideoClips;
+        int index = track.IndexOf(clip);
+        var next = index >= 0 && index + 1 < track.Count ? track[index + 1] : null;
+        return next?.Media.Kind == MediaKind.Video ? next : null;
+    }
+
+    /// <summary>Zobrazi jeden z prehravacu videa (null = zadny).</summary>
+    private void ShowVideoElement(int? index)
+    {
+        for (int i = 0; i < _videoElements.Length; i++)
+        {
+            _videoElements[i].Opacity = i == index ? 1 : 0;
+            _videoElements[i].IsMuted = i != index; // nacitany dalsi klip nesmi byt slyset
+        }
+    }
+
     /// <summary>Dorovna MediaElement na spravny soubor, pozici a stav prehravani.</summary>
-    private void SyncElement(MediaElement element, ElementState state, TimelineClip? clip, TimeSpan offset)
+    private void SyncElement(MediaElement element, ElementState state, TimelineClip? clip, TimeSpan offset, bool play)
     {
         if (clip is null)
         {
@@ -775,7 +847,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        var target = clip.SourceIn + offset;
+        var target = clip.SourceIn + clip.ToSource(offset);
+        if (element.SpeedRatio != clip.Speed)
+            element.SpeedRatio = clip.Speed;
 
         // Jiny soubor: nacti ho a po otevreni skoc na spravne misto (OnTimelineElementOpened)
         if (state.FilePath != clip.Media.FilePath)
@@ -784,7 +858,7 @@ public partial class MainWindow : Window
             state.IsOpened = false;
             state.PendingSeek = target;
             element.Source = new Uri(clip.Media.FilePath);
-            PlayOrPause(element, state);
+            PlayOrPause(element, state, play);
             return;
         }
 
@@ -794,7 +868,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (_isPlaying)
+        if (play)
         {
             // Video bezi samo; zasahneme jen kdyz se od hodin moc vzdali (napr. na strihu)
             if (!state.IsPlaying || (element.Position - target).Duration() > TimeSpan.FromMilliseconds(250))
@@ -805,19 +879,19 @@ public partial class MainWindow : Window
             element.Position = target;
         }
 
-        PlayOrPause(element, state);
+        PlayOrPause(element, state, play);
     }
 
-    private void PlayOrPause(MediaElement element, ElementState state)
+    private static void PlayOrPause(MediaElement element, ElementState state, bool play)
     {
-        if (_isPlaying && !state.IsPlaying)
+        if (play && !state.IsPlaying)
             element.Play();
-        else if (!_isPlaying && state.IsPlaying)
+        else if (!play && state.IsPlaying)
             element.Pause();
         else if (!state.IsOpened)
             element.Pause(); // otevre soubor a ukaze snimek
 
-        state.IsPlaying = _isPlaying;
+        state.IsPlaying = play;
     }
 
     private void OnTimelineElementOpened(MediaElement element, ElementState state)

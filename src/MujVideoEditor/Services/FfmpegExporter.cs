@@ -72,25 +72,20 @@ public partial class FfmpegExporter(string ffmpegPath)
         {
             string video = $"[v{segmentCount}]";
             string audio = $"[a{segmentCount}]";
-            string duration = Sec(clip.Duration);
 
             if (clip.Media.Kind == MediaKind.Image)
             {
                 args.AddRange(["-loop", "1", "-i", clip.Media.FilePath]);
-                filters.Add($"[{inputIndex}:v]trim=duration={duration},setpts=PTS-STARTPTS,{FitVideo(settings)}{video}");
+                filters.Add($"[{inputIndex}:v]trim=duration={Sec(clip.Duration)},setpts=PTS-STARTPTS,{FitVideo(settings)}{VideoFades(clip)}{video}");
                 filters.Add(Silence(clip.Duration, audio));
             }
             else
             {
-                string start = fastSeek ? "0" : Sec(clip.SourceIn);
-                if (fastSeek)
-                    args.AddRange(["-ss", Sec(clip.SourceIn), "-t", duration]);
-                args.AddRange(["-i", clip.Media.FilePath]);
-
-                filters.Add($"[{inputIndex}:v]trim=start={start}:duration={duration},setpts=PTS-STARTPTS,{FitVideo(settings)}{video}");
+                string start = AddSourceInput(args, clip, fastSeek);
+                string sourceSpan = Sec(clip.SourceOut - clip.SourceIn);
+                filters.Add($"[{inputIndex}:v]trim=start={start}:duration={sourceSpan},{SpeedPts(clip.Speed)},{FitVideo(settings)}{VideoFades(clip)}{video}");
                 filters.Add(await HasAudioAsync(clip.Media.FilePath)
-                    // apad + atrim zajisti presnou delku, i kdyz je zvuk ve videu kratsi
-                    ? $"[{inputIndex}:a]atrim=start={start}:duration={duration},asetpts=PTS-STARTPTS,{AudioFormat},apad,atrim=duration={duration}{audio}"
+                    ? AudioChain(inputIndex, start, clip) + audio
                     : Silence(clip.Duration, audio));
             }
 
@@ -143,11 +138,8 @@ public partial class FfmpegExporter(string ffmpegPath)
             int musicCount = 0;
             foreach (var clip in timeline.AudioClips)
             {
-                string start = fastSeek ? "0" : Sec(clip.SourceIn);
-                if (fastSeek)
-                    args.AddRange(["-ss", Sec(clip.SourceIn), "-t", Sec(clip.Duration)]);
-                args.AddRange(["-i", clip.Media.FilePath]);
-                filters.Add($"[{inputIndex}:a]atrim=start={start}:duration={Sec(clip.Duration)},asetpts=PTS-STARTPTS,{AudioFormat}[m{musicCount}]");
+                string start = AddSourceInput(args, clip, fastSeek);
+                filters.Add(AudioChain(inputIndex, start, clip) + $"[m{musicCount}]");
                 inputIndex++;
                 musicCount++;
             }
@@ -181,6 +173,62 @@ public partial class FfmpegExporter(string ffmpegPath)
                 // Docasne soubory s textem se nepodarilo smazat - nevadi
             }
         }
+    }
+
+    /// <summary>Prida vstupni soubor klipu; vrati, od kolika sekund ma filtr trim cist.</summary>
+    private static string AddSourceInput(List<string> args, TimelineClip clip, bool fastSeek)
+    {
+        if (fastSeek)
+            args.AddRange(["-ss", Sec(clip.SourceIn), "-t", Sec(clip.SourceOut - clip.SourceIn)]);
+        args.AddRange(["-i", clip.Media.FilePath]);
+        return fastSeek ? "0" : Sec(clip.SourceIn);
+    }
+
+    /// <summary>Zvuk klipu: usek ze zdroje, rychlost, hlasitost, presna delka a prolinani.</summary>
+    private static string AudioChain(int inputIndex, string start, TimelineClip clip)
+    {
+        string chain = $"[{inputIndex}:a]atrim=start={start}:duration={Sec(clip.SourceOut - clip.SourceIn)},asetpts=PTS-STARTPTS,";
+        chain += Tempo(clip.Speed) + AudioFormat;
+        if (Math.Abs(clip.Volume - 1) > 0.001)
+            chain += $",volume={clip.Volume.ToString("0.##", Inv)}";
+        // apad + atrim zajisti presnou delku, i kdyz je zvuk ve zdroji kratsi
+        chain += $",apad,atrim=duration={Sec(clip.Duration)}";
+        return chain + AudioFades(clip);
+    }
+
+    private static string SpeedPts(double speed) =>
+        Math.Abs(speed - 1) < 0.001 ? "setpts=PTS-STARTPTS" : $"setpts=(PTS-STARTPTS)/{speed.ToString("0.###", Inv)}";
+
+    /// <summary>atempo umi jen 0,5 az 2x, vetsi zmeny se skladaji z vice filtru za sebou.</summary>
+    private static string Tempo(double speed)
+    {
+        var factors = new List<double>();
+        while (speed > 2) { factors.Add(2); speed /= 2; }
+        while (speed < 0.5) { factors.Add(0.5); speed /= 0.5; }
+        if (Math.Abs(speed - 1) > 0.001)
+            factors.Add(speed);
+        return string.Concat(factors.Select(f => $"atempo={f.ToString("0.####", Inv)},"));
+    }
+
+    private static (double In, double Out) FadeLengths(TimelineClip clip)
+    {
+        double half = clip.Duration.TotalSeconds / 2;
+        return (Math.Min(clip.FadeIn, half), Math.Min(clip.FadeOut, half));
+    }
+
+    private static string VideoFades(TimelineClip clip) => Fades(clip, "fade");
+
+    private static string AudioFades(TimelineClip clip) => Fades(clip, "afade");
+
+    private static string Fades(TimelineClip clip, string filter)
+    {
+        var (fadeIn, fadeOut) = FadeLengths(clip);
+        string result = "";
+        if (fadeIn > 0)
+            result += $",{filter}=t=in:st=0:d={fadeIn.ToString("0.###", Inv)}";
+        if (fadeOut > 0)
+            result += $",{filter}=t=out:st={(clip.Duration.TotalSeconds - fadeOut).ToString("0.###", Inv)}:d={fadeOut.ToString("0.###", Inv)}";
+        return result;
     }
 
     private static readonly Dictionary<string, (string Regular, string Bold)> FontFiles = new()

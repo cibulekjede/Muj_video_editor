@@ -196,6 +196,9 @@ public partial class TimelineView : UserControl
         OnModelChanged();
     }
 
+    /// <summary>Prekresli casovou osu po zmene vlastnosti klipu zvenku (rychlost, prolinani...).</summary>
+    public void Refresh() => OnModelChanged();
+
     public void Undo() => RestoreFrom(_undoStack, _redoStack);
 
     public void Redo() => RestoreFrom(_redoStack, _undoStack);
@@ -403,6 +406,7 @@ public partial class TimelineView : UserControl
         _dragClip = null;
         _trimClip = null;
         _stateBeforeGesture = null;
+        HideSnapLine();
     }
 
     private void SeekToX(double x)
@@ -431,36 +435,39 @@ public partial class TimelineView : UserControl
         var clip = _trimClip!;
         var delta = TimeSpan.FromSeconds((x - _dragStartX) / _pixelsPerSecond);
         var oldDuration = clip.Duration;
+        var originalDuration = clip.ToTimeline(_trimOriginalOut - _trimOriginalIn);
+        var min = TimelineClip.MinDuration;
 
         if (clip.IsText)
         {
             // Text: levy okraj posouva zacatek (konec zustava), pravy meni delku
+            var end = _originalStart + originalDuration;
             if (_trimLeft)
             {
-                var end = _originalStart + (_trimOriginalOut - _trimOriginalIn);
-                var newStart = Clamp(_originalStart + delta, TimeSpan.Zero, end - TimelineClip.MinDuration);
+                var newStart = Clamp(SnapTime(_originalStart + delta, clip), TimeSpan.Zero, end - min);
                 clip.Start = newStart;
                 clip.SourceIn = TimeSpan.Zero;
                 clip.SourceOut = end - newStart;
             }
             else
             {
-                clip.SourceOut = Clamp(_trimOriginalOut + delta, clip.SourceIn + TimelineClip.MinDuration, clip.MaxSourceOut);
+                var newEnd = SnapTime(end + delta, clip);
+                clip.SourceOut = clip.SourceIn + Clamp(newEnd - clip.Start, min, TimelineClip.MaxImageDuration);
             }
-        }
-        else if (clip.Media.Kind == MediaKind.Image)
-        {
-            // Obrazek nema "zdroj", oba okraje jen meni jeho delku
-            var newOut = _trimLeft ? _trimOriginalOut - delta : _trimOriginalOut + delta;
-            clip.SourceOut = Clamp(newOut, clip.SourceIn + TimelineClip.MinDuration, TimelineClip.MaxImageDuration);
-        }
-        else if (_trimLeft)
-        {
-            clip.SourceIn = Clamp(_trimOriginalIn + delta, TimeSpan.Zero, clip.SourceOut - TimelineClip.MinDuration);
         }
         else
         {
-            clip.SourceOut = Clamp(_trimOriginalOut + delta, clip.SourceIn + TimelineClip.MinDuration, clip.MaxSourceOut);
+            // Magneticka stopa: zacatek klipu zustava, hybe se jeho konec (a vsechno za nim)
+            var duration = _trimLeft ? originalDuration - delta : originalDuration + delta;
+            duration = SnapTime(clip.Start + duration, clip) - clip.Start;
+            var sourceSpan = clip.ToSource(duration);
+
+            if (clip.Media.Kind == MediaKind.Image)
+                clip.SourceOut = clip.SourceIn + Clamp(sourceSpan, min, TimelineClip.MaxImageDuration);
+            else if (_trimLeft)
+                clip.SourceIn = Clamp(_trimOriginalOut - sourceSpan, TimeSpan.Zero, clip.SourceOut - min);
+            else
+                clip.SourceOut = Clamp(_trimOriginalIn + sourceSpan, clip.SourceIn + min, clip.MaxSourceOut);
         }
 
         if (clip.Duration != oldDuration)
@@ -474,8 +481,19 @@ public partial class TimelineView : UserControl
     {
         if (clip.IsText)
         {
-            // Text se posouva volne
-            var newStart = TimeSpan.FromSeconds(Math.Max(0, (_originalStart.TotalSeconds * _pixelsPerSecond + x - _dragStartX) / _pixelsPerSecond));
+            // Text se posouva volne; prichyti se zacatkem nebo koncem, podle toho, co je bliz
+            var desired = TimeSpan.FromSeconds(Math.Max(0, (_originalStart.TotalSeconds * _pixelsPerSecond + x - _dragStartX) / _pixelsPerSecond));
+            var startSnap = FindSnap(desired, clip);
+            var endSnap = FindSnap(desired + clip.Duration, clip);
+            var newStart = desired;
+            if (startSnap is { } s && (endSnap is null || (s - desired).Duration() <= (endSnap.Value - desired - clip.Duration).Duration()))
+                newStart = SnapTime(desired, clip);
+            else if (endSnap is not null)
+                newStart = SnapTime(desired + clip.Duration, clip) - clip.Duration;
+            else
+                HideSnapLine();
+            if (newStart < TimeSpan.Zero)
+                newStart = TimeSpan.Zero;
             if (newStart == clip.Start)
                 return;
             CommitGestureUndo();
@@ -495,6 +513,46 @@ public partial class TimelineView : UserControl
         track.Move(oldIndex, newIndex);
         OnModelChanged();
     }
+
+    // ===== Prichytavani (snap) =====
+
+    private const double SnapPixels = 8;
+
+    /// <summary>Nejblizsi bod k prichyceni (ukazatel, okraje jinych klipu) do 8 px, jinak null.</summary>
+    private TimeSpan? FindSnap(TimeSpan time, TimelineClip moving)
+    {
+        if (SnapCheck.IsChecked != true)
+            return null;
+
+        var points = new List<TimeSpan> { TimeSpan.Zero, _playhead };
+        var movingTrack = moving.IsText ? null : Model.TrackOf(moving);
+        foreach (var clip in Model.AllClips)
+        {
+            // Klipy za zkracovanym klipem se posouvaji s nim, k nim se prichytavat nedava smysl
+            if (clip == moving || (movingTrack is not null && Model.TrackOf(clip) == movingTrack && clip.Start > moving.Start))
+                continue;
+            points.Add(clip.Start);
+            points.Add(clip.End);
+        }
+
+        var best = points.MinBy(p => (p - time).Duration());
+        return (best - time).Duration().TotalSeconds * _pixelsPerSecond <= SnapPixels ? best : null;
+    }
+
+    private TimeSpan SnapTime(TimeSpan time, TimelineClip moving)
+    {
+        if (FindSnap(time, moving) is { } snapped)
+        {
+            Canvas.SetLeft(SnapLine, snapped.TotalSeconds * _pixelsPerSecond);
+            SnapLine.Visibility = Visibility.Visible;
+            return snapped;
+        }
+
+        HideSnapLine();
+        return time;
+    }
+
+    private void HideSnapLine() => SnapLine.Visibility = Visibility.Collapsed;
 
     /// <summary>Kolik klipu lezi (svym stredem) vlevo od pozice x.</summary>
     private static int InsertionIndex(IEnumerable<TimelineClip> clips, double x)

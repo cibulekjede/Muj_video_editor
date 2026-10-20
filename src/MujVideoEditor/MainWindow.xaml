@@ -210,7 +210,8 @@
                                              Checked="CategoryTab_Checked"/>
                                 <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE76E;" Content="Nálepky" Checked="CategoryTab_Checked"/>
                                 <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE945;" Content="Efekty" Checked="CategoryTab_Checked"/>
-                                <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE8AB;" Content="Přechody" Checked="CategoryTab_Checked"/>
+                                <RadioButton x:Name="TransitionsTab" Style="{StaticResource CategoryTab}" Tag="&#xE8AB;" Content="Přechody"
+                                             Checked="CategoryTab_Checked"/>
                                 <RadioButton x:Name="SubtitlesTab" Style="{StaticResource CategoryTab}" Tag="&#xE7F0;" Content="Titulky"
                                              Checked="CategoryTab_Checked"/>
                                 <RadioButton Style="{StaticResource CategoryTab}" Tag="&#xE71C;" Content="Filtry" Checked="CategoryTab_Checked"/>
@@ -354,6 +355,21 @@
                             </StackPanel>
                         </ScrollViewer>
 
+                        <!-- ===== Kategorie Prechody ===== -->
+                        <StackPanel x:Name="TransitionsCategoryPanel" Visibility="Collapsed" Margin="16">
+                            <TextBlock Text="Přechody" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock TextWrapping="Wrap" Style="{StaticResource SecondaryText}" Margin="0,4,0,14"
+                                       Text="Prolnutí přes černou: konec jednoho klipu ztmavne a další se z černé rozjasní. Zvuk se plynule ztiší a zesílí. U jednotlivého klipu ho nastavíš vpravo, když na klip klikneš."/>
+                            <Button Style="{StaticResource AccentButton}" HorizontalAlignment="Left" Padding="14,7" Click="FadeAllCuts_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE8AB;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Prolnout všechny střihy (0,5 s)"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource ToolButton}" HorizontalAlignment="Left" Padding="14,7" Margin="0,10,0,0"
+                                    Content="Odebrat všechny přechody" Click="RemoveAllFades_Click"/>
+                        </StackPanel>
+
                         <!-- ===== Kategorie, ktere jeste nejsou hotove ===== -->
                         <StackPanel x:Name="ComingSoonPanel" Visibility="Collapsed" VerticalAlignment="Center" HorizontalAlignment="Center">
                             <TextBlock Text="&#xE823;" FontFamily="{StaticResource IconFont}" FontSize="32"
@@ -416,6 +432,10 @@
                         <Viewbox Margin="16,16,16,8" Stretch="Uniform">
                             <Grid x:Name="PreviewCanvas" Width="1600" Height="900" Background="#0A0A0B"
                                   MouseLeftButtonDown="PreviewCanvas_MouseLeftButtonDown">
+                                <!-- Dva prehravace videa: zatimco jeden hraje, druhy si nacita dalsi klip -->
+                                <MediaElement x:Name="PlayerB" LoadedBehavior="Manual" UnloadedBehavior="Stop"
+                                              ScrubbingEnabled="True" Stretch="Uniform" Opacity="0" IsMuted="True"
+                                              MediaOpened="PlayerB_MediaOpened" MediaFailed="Player_MediaFailed"/>
                                 <MediaElement x:Name="Player" LoadedBehavior="Manual" UnloadedBehavior="Stop"
                                               ScrubbingEnabled="True" Stretch="Uniform"
                                               MediaOpened="Player_MediaOpened" MediaEnded="Player_MediaEnded"
@@ -488,6 +508,53 @@
                                 </WrapPanel>
                                 <TextBlock Text="Text můžeš v náhledu i přetáhnout myší." Style="{StaticResource SecondaryText}"
                                            Margin="0,8,0,0"/>
+                            </StackPanel>
+
+                            <!-- ===== Upravy klipu (video, obrazek, zvuk) ===== -->
+                            <StackPanel x:Name="ClipEditorPanel" Visibility="Collapsed" Margin="14,16,14,0">
+                                <StackPanel x:Name="VolumeSection">
+                                    <DockPanel Margin="0,0,0,6">
+                                        <TextBlock x:Name="VolumeText" DockPanel.Dock="Right" Style="{StaticResource SecondaryText}"/>
+                                        <TextBlock Text="Hlasitost" Style="{StaticResource SecondaryText}"/>
+                                    </DockPanel>
+                                    <DockPanel>
+                                        <CheckBox x:Name="MuteCheck" DockPanel.Dock="Right" Style="{StaticResource ChipCheck}"
+                                                  Content="Ztlumit" Margin="10,0,0,0" Click="MuteCheck_Click"/>
+                                        <Slider x:Name="VolumeSlider" Minimum="0" Maximum="200" VerticalAlignment="Center"
+                                                ValueChanged="VolumeSlider_ValueChanged"/>
+                                    </DockPanel>
+                                </StackPanel>
+
+                                <StackPanel x:Name="SpeedSection">
+                                    <TextBlock Text="Rychlost" Style="{StaticResource SecondaryText}" Margin="0,16,0,6"/>
+                                    <WrapPanel x:Name="SpeedChoices">
+                                        <RadioButton Style="{StaticResource ChipRadio}" GroupName="Speed" Content="0,25×" Tag="0.25" Margin="0,0,6,6" Click="Speed_Click"/>
+                                        <RadioButton Style="{StaticResource ChipRadio}" GroupName="Speed" Content="0,5×" Tag="0.5" Margin="0,0,6,6" Click="Speed_Click"/>
+                                        <RadioButton Style="{StaticResource ChipRadio}" GroupName="Speed" Content="1×" Tag="1" Margin="0,0,6,6" Click="Speed_Click"/>
+                                        <RadioButton Style="{StaticResource ChipRadio}" GroupName="Speed" Content="1,5×" Tag="1.5" Margin="0,0,6,6" Click="Speed_Click"/>
+                                        <RadioButton Style="{StaticResource ChipRadio}" GroupName="Speed" Content="2×" Tag="2" Margin="0,0,6,6" Click="Speed_Click"/>
+                                        <RadioButton Style="{StaticResource ChipRadio}" GroupName="Speed" Content="3×" Tag="3" Margin="0,0,6,6" Click="Speed_Click"/>
+                                        <RadioButton Style="{StaticResource ChipRadio}" GroupName="Speed" Content="4×" Tag="4" Margin="0,0,6,6" Click="Speed_Click"/>
+                                    </WrapPanel>
+                                </StackPanel>
+
+                                <TextBlock Text="Roztmívání na začátku" Style="{StaticResource SecondaryText}" Margin="0,16,0,6"/>
+                                <WrapPanel x:Name="FadeInChoices">
+                                    <RadioButton Style="{StaticResource ChipRadio}" GroupName="FadeIn" Content="Žádné" Tag="0" Margin="0,0,6,6" Click="FadeIn_Click"/>
+                                    <RadioButton Style="{StaticResource ChipRadio}" GroupName="FadeIn" Content="0,5 s" Tag="0.5" Margin="0,0,6,6" Click="FadeIn_Click"/>
+                                    <RadioButton Style="{StaticResource ChipRadio}" GroupName="FadeIn" Content="1 s" Tag="1" Margin="0,0,6,6" Click="FadeIn_Click"/>
+                                    <RadioButton Style="{StaticResource ChipRadio}" GroupName="FadeIn" Content="2 s" Tag="2" Margin="0,0,6,6" Click="FadeIn_Click"/>
+                                </WrapPanel>
+
+                                <TextBlock Text="Zatmívání na konci" Style="{StaticResource SecondaryText}" Margin="0,10,0,6"/>
+                                <WrapPanel x:Name="FadeOutChoices">
+                                    <RadioButton Style="{StaticResource ChipRadio}" GroupName="FadeOut" Content="Žádné" Tag="0" Margin="0,0,6,6" Click="FadeOut_Click"/>
+                                    <RadioButton Style="{StaticResource ChipRadio}" GroupName="FadeOut" Content="0,5 s" Tag="0.5" Margin="0,0,6,6" Click="FadeOut_Click"/>
+                                    <RadioButton Style="{StaticResource ChipRadio}" GroupName="FadeOut" Content="1 s" Tag="1" Margin="0,0,6,6" Click="FadeOut_Click"/>
+                                    <RadioButton Style="{StaticResource ChipRadio}" GroupName="FadeOut" Content="2 s" Tag="2" Margin="0,0,6,6" Click="FadeOut_Click"/>
+                                </WrapPanel>
+
+                                <Rectangle Height="1" Fill="{StaticResource BorderBrush}" Margin="0,14,0,0"/>
                             </StackPanel>
 
                             <!-- Radky se plni z kodu: podrobnosti projektu, nebo vybraneho media -->
